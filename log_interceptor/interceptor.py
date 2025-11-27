@@ -122,8 +122,14 @@ class LogInterceptor:
             raise FileNotFoundError(msg)
 
         self._running = False
+        self._paused = False
         self._observer: "Observer | None" = None  # noqa: UP037  # pyright: ignore[reportInvalidTypeForm]
         self._file_position = 0
+
+        # Статистика
+        self._lines_captured = 0
+        self._events_processed = 0
+        self._start_time: float | None = None
 
         # Сохраняем конфигурацию или используем значения по умолчанию
         if config:
@@ -180,6 +186,7 @@ class LogInterceptor:
             raise RuntimeError(msg)
 
         self._running = True
+        self._start_time = time.time()
 
         # Создаём и запускаем watchdog observer
         from watchdog.observers import Observer as WatchdogObserver  # noqa: PLC0415
@@ -235,6 +242,41 @@ class LogInterceptor:
         """
         with self._metadata_lock:
             return list(self._metadata_buffer)
+
+    def pause(self) -> None:
+        """Приостанавливает захват новых строк без остановки watchdog."""
+        self._paused = True
+
+    def resume(self) -> None:
+        """Возобновляет захват новых строк после паузы."""
+        self._paused = False
+
+    def is_paused(self) -> bool:
+        """Проверяет, находится ли interceptor на паузе.
+
+        Returns:
+            True, если на паузе, иначе False.
+
+        """
+        return self._paused
+
+    def get_stats(self) -> dict[str, int | float]:
+        """Возвращает статистику работы interceptor.
+
+        Returns:
+            Словарь со статистикой: lines_captured, events_processed, start_time, uptime_seconds.
+
+        """
+        uptime = 0.0
+        if self._start_time is not None:
+            uptime = time.time() - self._start_time
+
+        return {
+            "lines_captured": self._lines_captured,
+            "events_processed": self._events_processed,
+            "start_time": self._start_time or 0.0,
+            "uptime_seconds": uptime,
+        }
 
     def add_callback(self, callback: CallbackType) -> None:
         """Добавляет callback функцию для уведомления о новых строках.
@@ -328,10 +370,16 @@ class LogInterceptor:
         # Применяем все фильтры (логика AND)
         return all(filter_obj.filter(line) for filter_obj in self._filters)
 
-    def _process_new_lines(self) -> None:  # noqa: C901
+    def _process_new_lines(self) -> None:  # noqa: C901, PLR0912
         """Обрабатывает новые строки из лог-файла с обработкой ошибок."""
         try:
             if not self.source_file.exists():
+                return
+
+            # Если на паузе, обновляем позицию но не обрабатываем строки
+            if self._paused:
+                current_size = self.source_file.stat().st_size
+                self._file_position = current_size
                 return
 
             # Получаем текущий размер файла
@@ -350,6 +398,11 @@ class LogInterceptor:
 
                 # Применяем фильтры к строкам
                 filtered_lines = [line for line in new_lines if self._apply_filters(line)]
+
+                # Увеличиваем счетчики
+                if filtered_lines:
+                    self._lines_captured += len(filtered_lines)
+                    self._events_processed += 1
 
                 # Обрабатываем каждую отфильтрованную строку
                 for line in filtered_lines:

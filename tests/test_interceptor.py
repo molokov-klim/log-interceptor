@@ -625,3 +625,64 @@ def test_interceptor_get_lines_with_metadata(tmp_path: Path) -> None:
     assert entry["line"] == "Test"
     assert isinstance(entry["timestamp"], float)
     assert isinstance(entry["event_id"], int)
+
+
+def test_interceptor_pause_resume(tmp_path: Path) -> None:
+    """LogInterceptor должен поддерживать pause/resume."""
+    source_file = tmp_path / "app.log"
+    source_file.touch()
+
+    interceptor = LogInterceptor(source_file=source_file, use_buffer=True)
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("Line 1")
+    time.sleep(0.3)
+
+    interceptor.pause()
+    assert interceptor.is_paused()
+
+    # Строки во время паузы не должны захватываться
+    writer.write_line("Line during pause")
+    time.sleep(0.3)
+
+    interceptor.resume()
+    assert not interceptor.is_paused()
+
+    writer.write_line("Line 2")
+    time.sleep(0.3)
+
+    lines = interceptor.get_buffered_lines()
+    interceptor.stop()
+
+    # Line 1 и Line 2 должны быть захвачены
+    assert any("Line 1" in line for line in lines)
+    assert any("Line 2" in line for line in lines)
+    # Line during pause НЕ должна быть захвачена  # noqa: RUF003
+    assert not any("Line during pause" in line for line in lines)
+
+
+def test_interceptor_statistics(tmp_path: Path) -> None:
+    """LogInterceptor должен собирать статистику."""
+    source_file = tmp_path / "app.log"
+    source_file.touch()
+
+    interceptor = LogInterceptor(source_file=source_file, use_buffer=True)
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("Line 1")
+    writer.write_line("Line 2")
+    writer.write_line("Line 3")
+    time.sleep(0.3)
+
+    stats = interceptor.get_stats()
+    interceptor.stop()
+
+    assert stats["lines_captured"] >= 3
+    assert stats["events_processed"] >= 1
+    assert "start_time" in stats
+    assert "uptime_seconds" in stats
+    assert isinstance(stats["start_time"], float)
+    assert isinstance(stats["uptime_seconds"], float)
+    assert stats["uptime_seconds"] > 0
