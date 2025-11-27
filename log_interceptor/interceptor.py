@@ -131,6 +131,9 @@ class LogInterceptor:
         self._events_processed = 0
         self._start_time: float | None = None
 
+        # Debounce mechanism
+        self._last_event_time: float | None = None
+
         # Сохраняем конфигурацию или используем значения по умолчанию
         if config:
             from log_interceptor.config import InterceptorConfig  # noqa: PLC0415
@@ -370,11 +373,26 @@ class LogInterceptor:
         # Применяем все фильтры (логика AND)
         return all(filter_obj.filter(line) for filter_obj in self._filters)
 
-    def _process_new_lines(self) -> None:  # noqa: C901, PLR0912
+    def _process_new_lines(self) -> None:  # noqa: C901, PLR0912, PLR0915
         """Обрабатывает новые строки из лог-файла с обработкой ошибок."""
         try:
             if not self.source_file.exists():
                 return
+
+            # Debounce mechanism: проверяем, прошло ли достаточно времени с последнего события  # noqa: RUF003
+            current_time = time.time()
+            is_debounced_event = False
+            if self._last_event_time is not None:
+                time_since_last = current_time - self._last_event_time
+                if time_since_last < self._config.debounce_interval:
+                    # Событие слишком близко к предыдущему, отмечаем как дебаунсед
+                    is_debounced_event = True
+                else:
+                    # Прошло достаточно времени, обновляем время
+                    self._last_event_time = current_time
+            else:
+                # Первое событие
+                self._last_event_time = current_time
 
             # Если на паузе, обновляем позицию но не обрабатываем строки
             if self._paused:
@@ -402,7 +420,9 @@ class LogInterceptor:
                 # Увеличиваем счетчики
                 if filtered_lines:
                     self._lines_captured += len(filtered_lines)
-                    self._events_processed += 1
+                    # Увеличиваем events_processed только если это не дебаунсед событие
+                    if not is_debounced_event:
+                        self._events_processed += 1
 
                 # Обрабатываем каждую отфильтрованную строку
                 for line in filtered_lines:

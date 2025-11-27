@@ -686,3 +686,34 @@ def test_interceptor_statistics(tmp_path: Path) -> None:
     assert isinstance(stats["start_time"], float)
     assert isinstance(stats["uptime_seconds"], float)
     assert stats["uptime_seconds"] > 0
+
+
+def test_interceptor_debounce_prevents_duplicates(tmp_path: Path) -> None:
+    """Debounce должен предотвращать обработку дублирующихся событий."""
+    source_file = tmp_path / "app.log"
+    source_file.touch()
+
+    config = InterceptorConfig(debounce_interval=0.5)
+    interceptor = LogInterceptor(
+        source_file=source_file,
+        config=config,
+        use_buffer=True,
+    )
+    interceptor.start()
+
+    # Быстрые множественные записи
+    writer = MockLogWriter(source_file)
+    for i in range(10):
+        writer.write_line(f"Line {i}")
+        time.sleep(0.05)  # Быстрее чем debounce (0.5s)
+
+    time.sleep(1.0)  # Ждём завершения debounce
+
+    stats = interceptor.get_stats()
+    interceptor.stop()
+
+    # Должно быть обработано меньше событий из-за debounce
+    assert stats["events_processed"] < 10
+    # Но все строки должны быть захвачены  # noqa: RUF003
+    lines = interceptor.get_buffered_lines()
+    assert len(lines) >= 10
