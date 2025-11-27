@@ -66,4 +66,3 @@ source_file.unlink()
 target_file.unlink()
 
 print("\n✅ Пример завершен!")
-

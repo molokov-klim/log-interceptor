@@ -679,6 +679,5 @@ with LogInterceptor(source_file="app.log", use_buffer=True) as interceptor:
 ## См. также
 
 - [README](../README.md) — общая информация и быстрый старт
-- [Technical Specifications](../Technical_specifications.md) — детальные требования
 - [Examples](../examples/) — примеры использования
 

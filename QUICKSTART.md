@@ -147,7 +147,6 @@ start htmlcov/index.html
 - **План разработки:** [dev_plan.md](dev_plan.md)
 - **Техническая спецификация:** [Technical specifications.md](Technical%20specifications.md)
 - **API документация:** [docs/API.md](docs/API.md)
-- **Руководство контрибьютора:** [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## ✅ Checklist перед PR
 
