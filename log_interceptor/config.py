@@ -73,7 +73,7 @@ class InterceptorConfig:
             ConfigurationError: Если preset неизвестен.
 
         """
-        presets = {
+        presets: dict[str, dict[str, float | int]] = {
             "aggressive": {
                 "debounce_interval": 0.01,
                 "buffer_size": 10000,
@@ -99,5 +99,5 @@ class InterceptorConfig:
             raise ConfigurationError(msg)
 
         # Объединяем preset и переопределения
-        config_dict = {**presets[preset], **overrides}
+        config_dict: dict[str, Any] = {**presets[preset], **overrides}
         return cls(**config_dict)
