@@ -1,30 +1,41 @@
-name: Pyright
+# SPDX-FileCopyrightText: 2023 Molokov Klim
+#
+# SPDX-License-Identifier: MIT
 
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+---
+name: Pyright Type Check
+
+on:  # yamllint disable-line rule:truthy
+  push: {}
+  pull_request: {}
 
 jobs:
-  typecheck:
-    name: Type Checking
-    runs-on: ubuntu-latest
-
+  # Purpose: Validates Python type annotations and catches type-related bugs
+  # What it does: Runs Pyright static type checker on entire codebase with
+  #               strict type checking
+  # Problems it solves: Detects type errors before runtime, enforces type
+  #                     safety, improves code quality, helps maintain proper
+  #                     type annotations throughout the project
+  type-check:
+    runs-on: [self-hosted, linux, x64]
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install uv
+        run: pip install uv
+      - name: Install dependencies
+        run: uv sync --dev
+      - name: Run Pyright
+        run: uv run pyright
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
-        cache: 'pip'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev]"
-
-    - name: Run pyright
-      run: pyright
-
+# Local run:
+# - Install uv:
+#   pip install uv
+# - Install dependencies:
+#   uv sync --dev
+# - Run Pyright type checker:
+#   uv run pyright
+# - Check specific file:
+#   uv run pyright path/to/file.py
