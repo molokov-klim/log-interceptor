@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from log_interceptor.config import InterceptorConfig
 from log_interceptor.filters import CompositeFilter, PredicateFilter, RegexFilter
 from log_interceptor.interceptor import LogInterceptor
 from tests.mock_app import MockLogWriter
@@ -465,3 +466,112 @@ def test_interceptor_context_manager_cleanup_on_exception(tmp_path: Path) -> Non
 
     assert interceptor is not None
     assert not interceptor.is_running()
+
+
+def test_interceptor_handles_missing_file(tmp_path: Path) -> None:
+    """LogInterceptor должен обрабатывать временную недоступность файла."""
+    source_file = tmp_path / "app.log"
+
+    # Файл ещё не существует
+    interceptor = LogInterceptor(source_file=source_file, allow_missing=True, use_buffer=True)
+    interceptor.start()
+
+    # Файл появляется
+    time.sleep(0.2)
+    source_file.write_text("First line\n")
+
+    time.sleep(0.5)
+
+    # Добавляем новую строку
+    source_file.write_text("First line\nSecond line\n")
+    time.sleep(0.3)
+
+    lines = interceptor.get_buffered_lines()
+    interceptor.stop()
+
+    # Должна быть захвачена хотя бы "Second line"
+    assert len(lines) >= 1
+    assert any("Second line" in line for line in lines)
+
+
+def test_interceptor_handles_permission_error(tmp_path: Path) -> None:
+    """LogInterceptor должен обрабатывать PermissionError."""
+    source_file = tmp_path / "app.log"
+    source_file.write_text("Initial\n")
+
+    interceptor = LogInterceptor(source_file=source_file, use_buffer=True)
+    interceptor.start()
+
+    # Имитируем потерю прав доступа
+    source_file.chmod(0o000)
+
+    time.sleep(0.3)
+
+    # LogInterceptor должен продолжать работать
+    assert interceptor.is_running()
+
+    # Восстанавливаем права
+    source_file.chmod(0o644)
+
+    interceptor.stop()
+
+
+def test_interceptor_handles_file_rotation(tmp_path: Path) -> None:
+    """LogInterceptor должен обрабатывать ротацию лог-файла."""
+    source_file = tmp_path / "app.log"
+    source_file.write_text("Initial\n")
+
+    interceptor = LogInterceptor(source_file=source_file, use_buffer=True)
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("Line before rotation")
+    time.sleep(0.3)
+
+    # Ротация: переименовываем старый файл, создаём новый
+    rotated_file = tmp_path / "app.log.1"
+    source_file.rename(rotated_file)
+    source_file.write_text("")  # Новый файл
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("Line after rotation")
+    time.sleep(0.5)
+
+    lines = interceptor.get_buffered_lines()
+    interceptor.stop()
+
+    # Должны быть обе строки  # noqa: RUF003
+    assert any("Line before rotation" in line for line in lines)
+    assert any("Line after rotation" in line for line in lines)
+
+
+def test_interceptor_with_config(tmp_path: Path) -> None:
+    """LogInterceptor должен использовать настройки из InterceptorConfig."""
+    source_file = tmp_path / "app.log"
+    target_file = tmp_path / "captured.log"
+    source_file.touch()
+
+    # Создаём кастомную конфигурацию
+    config = InterceptorConfig(
+        encoding="utf-8",
+        buffer_size=500,
+        debounce_interval=0.05,
+    )
+
+    interceptor = LogInterceptor(
+        source_file=source_file,
+        target_file=target_file,
+        use_buffer=True,
+        config=config,
+    )
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("Test with config")
+
+    time.sleep(0.3)
+    interceptor.stop()
+
+    # Проверяем что файл был записан с правильной кодировкой  # noqa: RUF003
+    content = target_file.read_text(encoding="utf-8")
+    assert "Test with config" in content

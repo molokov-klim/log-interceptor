@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from watchdog.events import FileSystemEvent
     from watchdog.observers import Observer
 
+    from log_interceptor.config import InterceptorConfig
     from log_interceptor.filters import BaseFilter
 
 # Тип для callback функций
@@ -84,6 +85,7 @@ class LogInterceptor:
         buffer_size: int = 1000,
         overflow_strategy: Literal["FIFO"] = "FIFO",
         filters: Sequence[BaseFilter] | None = None,
+        config: InterceptorConfig | None = None,
     ) -> None:
         """Инициализирует LogInterceptor.
 
@@ -95,6 +97,7 @@ class LogInterceptor:
             buffer_size: Максимальный размер буфера в памяти.
             overflow_strategy: Стратегия при переполнении буфера ("FIFO").
             filters: Список фильтров для применения к новым строкам.
+            config: Объект конфигурации для расширенных настроек.
 
         Raises:
             FileNotFoundError: Если source_file не существует и allow_missing=False.
@@ -110,6 +113,16 @@ class LogInterceptor:
         self._running = False
         self._observer: "Observer | None" = None  # noqa: UP037  # pyright: ignore[reportInvalidTypeForm]
         self._file_position = 0
+
+        # Сохраняем конфигурацию или используем значения по умолчанию
+        if config:
+            from log_interceptor.config import InterceptorConfig  # noqa: PLC0415
+
+            self._config = config
+        else:
+            from log_interceptor.config import InterceptorConfig  # noqa: PLC0415
+
+            self._config = InterceptorConfig()
 
         # Инициализируем буфер в памяти
         self._buffer: deque[str] | None = deque(maxlen=buffer_size) if use_buffer else None
@@ -290,40 +303,49 @@ class LogInterceptor:
         return all(filter_obj.filter(line) for filter_obj in self._filters)
 
     def _process_new_lines(self) -> None:
-        """Обрабатывает новые строки из лог-файла."""
-        if not self.source_file.exists():
-            return
+        """Обрабатывает новые строки из лог-файла с обработкой ошибок."""
+        try:
+            if not self.source_file.exists():
+                return
 
-        # Получаем текущий размер файла
-        current_size = self.source_file.stat().st_size
+            # Получаем текущий размер файла
+            current_size = self.source_file.stat().st_size
 
-        # Если файл был усечён (truncated) или ротирован, сбрасываем позицию
-        if current_size < self._file_position:
-            self._file_position = 0
+            # Если файл был усечён (truncated) или ротирован, сбрасываем позицию
+            if current_size < self._file_position:
+                logger.info("File rotation detected for %s, resetting position", self.source_file)
+                self._file_position = 0
 
-        # Читаем новые строки
-        if current_size > self._file_position:
-            with self.source_file.open("r", encoding="utf-8") as f:
-                f.seek(self._file_position)
-                new_lines = f.readlines()
+            # Читаем новые строки
+            if current_size > self._file_position:
+                with self.source_file.open("r", encoding=self._config.encoding) as f:
+                    f.seek(self._file_position)
+                    new_lines = f.readlines()
 
-            # Применяем фильтры к строкам
-            filtered_lines = [line for line in new_lines if self._apply_filters(line)]
+                # Применяем фильтры к строкам
+                filtered_lines = [line for line in new_lines if self._apply_filters(line)]
 
-            # Обрабатываем каждую отфильтрованную строку
-            for line in filtered_lines:
-                # Записываем в буфер (если включён)
-                if self._buffer is not None:
-                    with self._buffer_lock:
-                        self._buffer.append(line)
+                # Обрабатываем каждую отфильтрованную строку
+                for line in filtered_lines:
+                    # Записываем в буфер (если включён)
+                    if self._buffer is not None:
+                        with self._buffer_lock:
+                            self._buffer.append(line)
 
-                # Вызываем callbacks
-                self._invoke_callbacks(line)
+                    # Вызываем callbacks
+                    self._invoke_callbacks(line)
 
-            # Записываем отфильтрованные строки в целевой файл
-            if self.target_file and filtered_lines:
-                with self.target_file.open("a", encoding="utf-8") as f:
-                    f.writelines(filtered_lines)
+                # Записываем отфильтрованные строки в целевой файл
+                if self.target_file and filtered_lines:
+                    with self.target_file.open("a", encoding=self._config.encoding) as f:
+                        f.writelines(filtered_lines)
 
-            # Обновляем позицию
-            self._file_position = current_size
+                # Обновляем позицию
+                self._file_position = current_size
+
+        except PermissionError:
+            logger.warning("Permission denied when reading %s, will retry", self.source_file)
+        except OSError:
+            logger.exception("OS error when reading %s", self.source_file)
+        except Exception:
+            logger.exception("Unexpected error processing %s", self.source_file)
