@@ -21,16 +21,25 @@ from log_interceptor.exceptions import (
     LogBufferError,
     LogInterceptorError,
 )
+from log_interceptor.filters import (
+    BaseFilter,
+    CompositeFilter,
+    PredicateFilter,
+    RegexFilter,
+)
 
 __version__ = "0.1.0"
 
 __all__ = [
+    "BaseFilter",
+    "CompositeFilter",
     "ConfigurationError",
     "FileWatchError",
     "FilterError",
     "InterceptorConfig",
     "LogBufferError",
     "LogInterceptorError",
+    "PredicateFilter",
+    "RegexFilter",
     "__version__",
 ]
-

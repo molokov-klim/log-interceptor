@@ -58,4 +58,3 @@ class ConfigurationError(LogInterceptorError):
     - Неизвестными пресетами
     - Конфликтующими настройками
     """
-

@@ -101,4 +101,3 @@ class InterceptorConfig:
         # Объединяем preset и переопределения
         config_dict = {**presets[preset], **overrides}
         return cls(**config_dict)
-
