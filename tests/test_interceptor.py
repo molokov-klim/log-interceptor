@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from log_interceptor.filters import CompositeFilter, PredicateFilter, RegexFilter
 from log_interceptor.interceptor import LogInterceptor
 from tests.mock_app import MockLogWriter
 
@@ -192,3 +193,134 @@ def test_interceptor_buffer_disabled(tmp_path: Path) -> None:
     assert len(lines) == 0
 
     interceptor.stop()
+
+
+def test_interceptor_with_filter(tmp_path: Path) -> None:
+    """LogInterceptor должен применять фильтр к новым строкам."""
+    source_file = tmp_path / "app.log"
+    target_file = tmp_path / "captured.log"
+    source_file.touch()
+
+    error_filter = RegexFilter(r"ERROR", mode="whitelist")
+
+    interceptor = LogInterceptor(
+        source_file=source_file,
+        target_file=target_file,
+        filters=[error_filter],
+    )
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("INFO: Application started")
+    writer.write_line("ERROR: Something went wrong")
+    writer.write_line("DEBUG: Debugging info")
+    writer.write_line("ERROR: Another error")
+
+    time.sleep(0.3)
+    interceptor.stop()
+
+    lines = target_file.read_text().splitlines()
+    # Проверяем что все строки содержат ERROR (фильтр работает)
+    assert len(lines) >= 2
+    assert all("ERROR" in line for line in lines)
+    # Проверяем что INFO и DEBUG отфильтрованы
+    assert not any("INFO" in line for line in lines)
+    assert not any("DEBUG" in line for line in lines)
+
+
+def test_interceptor_with_buffer_and_filter(tmp_path: Path) -> None:
+    """Фильтр должен применяться и к буферу."""
+    source_file = tmp_path / "app.log"
+    source_file.touch()
+
+    error_filter = RegexFilter(r"ERROR", mode="whitelist")
+
+    interceptor = LogInterceptor(
+        source_file=source_file,
+        use_buffer=True,
+        filters=[error_filter],
+    )
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("INFO: Application started")
+    writer.write_line("ERROR: Something went wrong")
+    writer.write_line("DEBUG: Debugging info")
+    writer.write_line("ERROR: Another error")
+
+    time.sleep(0.3)
+
+    lines = interceptor.get_buffered_lines()
+    # Проверяем что все строки содержат ERROR (фильтр работает)
+    assert len(lines) >= 2
+    assert all("ERROR" in line for line in lines)
+    # Проверяем что INFO и DEBUG отфильтрованы
+    assert not any("INFO" in line for line in lines)
+    assert not any("DEBUG" in line for line in lines)
+
+    interceptor.stop()
+
+
+def test_interceptor_with_multiple_filters(tmp_path: Path) -> None:
+    """LogInterceptor должен применять несколько фильтров с логикой AND."""
+    source_file = tmp_path / "app.log"
+    target_file = tmp_path / "captured.log"
+    source_file.touch()
+
+    # Только ERROR и содержащие "critical"
+    error_filter = RegexFilter(r"ERROR", mode="whitelist")
+    critical_filter = PredicateFilter(lambda line: "critical" in line.lower())
+    composite_filter = CompositeFilter([error_filter, critical_filter], mode="AND")
+
+    interceptor = LogInterceptor(
+        source_file=source_file,
+        target_file=target_file,
+        filters=[composite_filter],
+    )
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("INFO: Application started")
+    writer.write_line("ERROR: Something went wrong")
+    writer.write_line("ERROR: Critical issue detected")
+    writer.write_line("WARNING: Critical warning")
+
+    time.sleep(0.3)
+    interceptor.stop()
+
+    lines = target_file.read_text().splitlines()
+    # Должна быть минимум 1 строка
+    assert len(lines) >= 1
+    # Все строки должны содержать И ERROR И Critical  # noqa: RUF003
+    assert all("ERROR" in line and "Critical" in line for line in lines)
+    # Не должно быть INFO или WARNING  # noqa: RUF003
+    assert not any("INFO" in line for line in lines)
+    assert not any("WARNING" in line for line in lines)
+
+
+def test_interceptor_without_filters(tmp_path: Path) -> None:
+    """Без фильтров все строки должны проходить."""
+    source_file = tmp_path / "app.log"
+    target_file = tmp_path / "captured.log"
+    source_file.touch()
+
+    interceptor = LogInterceptor(
+        source_file=source_file,
+        target_file=target_file,
+    )
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("Line 1")
+    writer.write_line("Line 2")
+    writer.write_line("Line 3")
+
+    time.sleep(0.3)
+    interceptor.stop()
+
+    lines = target_file.read_text().splitlines()
+    # Без фильтров все строки должны быть захвачены
+    assert len(lines) >= 3
+    assert "Line 1" in lines
+    assert "Line 2" in lines
+    assert "Line 3" in lines

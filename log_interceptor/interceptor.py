@@ -19,6 +19,8 @@ if TYPE_CHECKING:
     from watchdog.events import FileSystemEvent
     from watchdog.observers import Observer
 
+    from log_interceptor.filters import BaseFilter
+
 
 class _LogFileEventHandler(FileSystemEventHandler):
     """Обработчик событий файловой системы для мониторинга лог-файла."""
@@ -65,6 +67,7 @@ class LogInterceptor:
         use_buffer: bool = False,
         buffer_size: int = 1000,
         overflow_strategy: Literal["FIFO"] = "FIFO",
+        filters: Sequence[BaseFilter] | None = None,
     ) -> None:
         """Инициализирует LogInterceptor.
 
@@ -75,6 +78,7 @@ class LogInterceptor:
             use_buffer: Если True, включает буферизацию строк в памяти.
             buffer_size: Максимальный размер буфера в памяти.
             overflow_strategy: Стратегия при переполнении буфера ("FIFO").
+            filters: Список фильтров для применения к новым строкам.
 
         Raises:
             FileNotFoundError: Если source_file не существует и allow_missing=False.
@@ -95,6 +99,9 @@ class LogInterceptor:
         self._buffer: deque[str] | None = deque(maxlen=buffer_size) if use_buffer else None
         self._buffer_lock = threading.Lock()
         self._overflow_strategy = overflow_strategy
+
+        # Инициализируем фильтры
+        self._filters: Sequence[BaseFilter] = filters if filters else []
 
         # Инициализируем позицию в файле (если файл существует)
         if self.source_file.exists():
@@ -167,6 +174,22 @@ class LogInterceptor:
         with self._buffer_lock:
             self._buffer.clear()
 
+    def _apply_filters(self, line: str) -> bool:
+        """Применяет фильтры к строке лога.
+
+        Args:
+            line: Строка для фильтрации.
+
+        Returns:
+            True, если строка прошла все фильтры, иначе False.
+
+        """
+        if not self._filters:
+            return True
+
+        # Применяем все фильтры (логика AND)
+        return all(filter_obj.filter(line) for filter_obj in self._filters)
+
     def _process_new_lines(self) -> None:
         """Обрабатывает новые строки из лог-файла."""
         if not self.source_file.exists():
@@ -185,16 +208,19 @@ class LogInterceptor:
                 f.seek(self._file_position)
                 new_lines = f.readlines()
 
-            # Записываем новые строки в буфер (если включён)
-            if self._buffer is not None and new_lines:
+            # Применяем фильтры к строкам
+            filtered_lines = [line for line in new_lines if self._apply_filters(line)]
+
+            # Записываем отфильтрованные строки в буфер (если включён)
+            if self._buffer is not None and filtered_lines:
                 with self._buffer_lock:
-                    for line in new_lines:
+                    for line in filtered_lines:
                         self._buffer.append(line)
 
-            # Записываем новые строки в целевой файл
-            if self.target_file and new_lines:
+            # Записываем отфильтрованные строки в целевой файл
+            if self.target_file and filtered_lines:
                 with self.target_file.open("a", encoding="utf-8") as f:
-                    f.writelines(new_lines)
+                    f.writelines(filtered_lines)
 
             # Обновляем позицию
             self._file_position = current_size
