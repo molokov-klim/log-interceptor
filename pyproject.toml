@@ -1,0 +1,187 @@
+# SPDX-FileCopyrightText: 2023 Molokov Klim
+#
+# SPDX-License-Identifier: MIT
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "log-interceptor"
+version = "0.1.0"
+description = "Python library for intercepting and monitoring changes in external log files in real-time"
+authors = [
+  { name = "Hash", email = "hash@example.com" }
+]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+keywords = ["logging", "monitoring", "testing", "watchdog", "file-watcher"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Testing",
+  "Topic :: System :: Logging",
+  "Topic :: System :: Monitoring",
+  "Typing :: Typed",
+]
+
+dependencies = [
+  "watchdog>=3.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4.0",
+  "pytest-cov>=4.1.0",
+  "pytest-benchmark>=4.0.0",
+  "ruff>=0.1.0",
+  "pyright>=1.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/hash/log-interceptor"
+Documentation = "https://github.com/hash/log-interceptor/blob/main/README.md"
+Repository = "https://github.com/hash/log-interceptor"
+Issues = "https://github.com/hash/log-interceptor/issues"
+
+# ---------- setuptools ----------
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["log_interceptor*"]
+exclude = ["tests*", "docs*"]
+
+[tool.setuptools.package-data]
+log_interceptor = ["py.typed"]
+
+# ---------- UV ----------
+[tool.uv]
+environments = [
+  "sys_platform == 'win32'",
+  "sys_platform == 'windows'",
+  "sys_platform == 'linux'"
+]
+
+# ---------- RUFF ----------
+[tool.ruff]
+target-version = "py39"
+line-length = 120
+indent-width = 4
+
+[tool.ruff.lint]
+select = ["ALL"]
+
+ignore = [
+  "D203", # conflict in D
+  "D211", # conflict in D
+  "D212", # conflict in D
+  "D213", # conflict in D
+  "D401", # annoying - First line should be in imperative mood
+  "E501", # line too long
+  "ANN401", # Any
+  "S101", # assert
+  "PGH004", # blanket-noqa
+  "B008", # do not perform function calls in argument defaults
+  "B904", # raise from None
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+  "S101", # assert allowed in tests
+  "PLR2004", # magic values allowed in tests
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# ---------- PYRIGHT ----------
+
+[tool.pyright]
+include = ["log_interceptor"]
+exclude = [
+  "**/__pycache__",
+  "**/.pytest_cache",
+  "**/node_modules",
+  ".venv",
+  "build",
+  "dist",
+  "debug*",
+  "tests",
+  "tests/*",
+  "**/tests",
+  "**/tests/*",
+  "**/test*",
+  "**/test*/*",
+  "**/test*.py",
+  "**/test*/*.py",
+]
+pythonVersion = "3.9"
+pythonPlatform = "All"
+
+typeCheckingMode = "strict"
+
+venvPath = "."
+venv = ".venv"
+
+# ---------- Pytest ----------
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "--strict-config",
+  "--showlocals",
+]
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "integration: marks tests as integration tests",
+  "unit: marks tests as unit tests",
+]
+filterwarnings = [
+  "error",
+  "ignore::DeprecationWarning",
+]
+
+# ---------- Coverage ----------
+[tool.coverage.run]
+source = ["log_interceptor"]
+branch = true
+parallel = true
+omit = [
+  "tests/*",
+  "**/__pycache__/*",
+  "**/.pytest_cache/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "if TYPE_CHECKING:",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "@abstractmethod",
+  "@abc.abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
