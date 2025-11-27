@@ -15,6 +15,9 @@
 - 🔍 **Гибкая фильтрация** — поддержка regex, функций-предикатов и композитных фильтров
 - 💾 **Буферизация в памяти** — сохранение логов с различными стратегиями переполнения
 - 🎯 **Callback система** — асинхронные обработчики для новых записей
+- ⏸️ **Pause/Resume** — управление захватом логов без остановки мониторинга
+- 📊 **Статистика** — отслеживание количества событий, времени работы и метрик
+- 🏷️ **Метаданные** — timestamp и event_id для каждой строки
 - 🛡️ **Надёжность** — обработка ошибок, ротация файлов, восстановление
 - 🌍 **Кроссплатформенность** — работает на Linux и Windows
 - 🐍 **Python 3.9+** — полная поддержка type hints
@@ -110,6 +113,49 @@ interceptor.start()
 interceptor.stop()
 ```
 
+### Pause/Resume для контроля потока
+
+```python
+from log_interceptor import LogInterceptor
+
+interceptor = LogInterceptor(source_file="app.log", use_buffer=True)
+interceptor.start()
+
+# Захват логов
+# ...
+
+# Приостановить захват для обработки
+interceptor.pause()
+lines = interceptor.get_buffered_lines()
+# Обработать lines...
+interceptor.clear_buffer()
+
+# Возобновить захват
+interceptor.resume()
+
+interceptor.stop()
+```
+
+### Статистика и метаданные
+
+```python
+from log_interceptor import LogInterceptor
+
+with LogInterceptor(source_file="app.log", use_buffer=True) as interceptor:
+    # Ваш код
+    # ...
+    
+    # Получить статистику
+    stats = interceptor.get_stats()
+    print(f"Захвачено строк: {stats['lines_captured']}")
+    print(f"Время работы: {stats['uptime_seconds']:.2f}s")
+    
+    # Получить метаданные
+    metadata = interceptor.get_lines_with_metadata()
+    for entry in metadata:
+        print(f"[{entry['event_id']}] {entry['line']}")
+```
+
 ### Интеграция с pytest
 
 ```python
@@ -140,6 +186,54 @@ def test_application_logs_error(log_interceptor):
     # Проверка логов
     lines = log_interceptor.get_buffered_lines()
     assert any("ERROR" in line for line in lines)
+```
+
+## 🎯 Дополнительные возможности
+
+### Context Manager Support
+
+```python
+with LogInterceptor(source_file="app.log", target_file="captured.log") as interceptor:
+    # Автоматический start() при входе
+    # Ваш код
+    pass
+    # Автоматический stop() при выходе
+```
+
+### Timestamp для аудита
+
+```python
+from log_interceptor import LogInterceptor
+
+with LogInterceptor(
+    source_file="app.log",
+    target_file="captured.log",
+    add_timestamps=True  # ISO 8601 формат
+) as interceptor:
+    # В captured.log будет:
+    # [CAPTURED_AT: 2025-11-27T14:30:45.123456+00:00] Log line
+    pass
+```
+
+### Конфигурация и пресеты
+
+```python
+from log_interceptor import LogInterceptor, InterceptorConfig
+
+# Использование пресета
+config = InterceptorConfig.from_preset("aggressive")
+
+# Или кастомная конфигурация
+config = InterceptorConfig(
+    encoding="utf-8",
+    buffer_size=5000,
+    retry_max_attempts=5
+)
+
+interceptor = LogInterceptor(
+    source_file="app.log",
+    config=config
+)
 ```
 
 ## 📚 Документация

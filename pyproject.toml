@@ -104,6 +104,21 @@ ignore = [
 "log_interceptor/**/*.py" = [
   "RUF002",   # кириллические буквы в docstrings
 ]
+"examples/**/*.py" = [
+  "T201",     # print allowed in examples
+  "RUF001",   # кириллические символы в строках
+  "RUF002",   # кириллические буквы в docstrings
+  "RUF003",   # кириллические символы в комментариях
+  "PLW0603",  # global statement allowed in examples
+  "PLR2004",  # magic values allowed in examples
+  "DTZ006",   # datetime without tz allowed in examples
+  "ARG001",   # unused arguments allowed in examples
+  "D100",     # missing module docstring allowed in examples
+  "D103",     # missing function docstring allowed in examples
+  "INP001",   # implicit namespace package allowed in examples
+  "N999",     # invalid module name allowed in examples
+  "ANN201",   # missing return type allowed in examples
+]
 
 [tool.ruff.format]
 quote-style = "double"
