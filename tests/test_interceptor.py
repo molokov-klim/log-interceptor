@@ -575,3 +575,53 @@ def test_interceptor_with_config(tmp_path: Path) -> None:
     # Проверяем что файл был записан с правильной кодировкой  # noqa: RUF003
     content = target_file.read_text(encoding="utf-8")
     assert "Test with config" in content
+
+
+def test_interceptor_adds_timestamps(tmp_path: Path) -> None:
+    """LogInterceptor должен добавлять timestamp к захваченным строкам."""
+    source_file = tmp_path / "app.log"
+    target_file = tmp_path / "captured.log"
+    source_file.touch()
+
+    interceptor = LogInterceptor(
+        source_file=source_file,
+        target_file=target_file,
+        add_timestamps=True,
+    )
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("Test line")
+    time.sleep(0.3)
+
+    interceptor.stop()
+
+    content = target_file.read_text()
+    # Формат: [CAPTURED_AT: 2025-11-27T10:30:45.123456] Test line
+    assert "[CAPTURED_AT:" in content
+    assert "Test line" in content
+
+
+def test_interceptor_get_lines_with_metadata(tmp_path: Path) -> None:
+    """LogInterceptor должен возвращать строки с метаданными."""
+    source_file = tmp_path / "app.log"
+    source_file.touch()
+
+    interceptor = LogInterceptor(source_file=source_file, use_buffer=True)
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("Test")
+    time.sleep(0.3)
+
+    lines_with_meta = interceptor.get_lines_with_metadata()
+    interceptor.stop()
+
+    assert len(lines_with_meta) >= 1
+    entry = lines_with_meta[0]
+    assert "line" in entry
+    assert "timestamp" in entry
+    assert "event_id" in entry
+    assert entry["line"] == "Test"
+    assert isinstance(entry["timestamp"], float)
+    assert isinstance(entry["event_id"], int)

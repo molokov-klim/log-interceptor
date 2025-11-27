@@ -12,8 +12,9 @@ import threading
 import time
 from collections import deque
 from collections.abc import Callable
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, TypedDict
 
 from watchdog.events import FileSystemEventHandler
 
@@ -31,6 +32,14 @@ if TYPE_CHECKING:
 
     from log_interceptor.config import InterceptorConfig
     from log_interceptor.filters import BaseFilter
+
+
+class LineMetadata(TypedDict):
+    """Метаданные для строки лога."""
+
+    line: str
+    timestamp: float
+    event_id: int
 
 # Тип для callback функций
 CallbackType = Callable[[str, float, int], None]
@@ -86,6 +95,7 @@ class LogInterceptor:
         overflow_strategy: Literal["FIFO"] = "FIFO",
         filters: Sequence[BaseFilter] | None = None,
         config: InterceptorConfig | None = None,
+        add_timestamps: bool = False,
     ) -> None:
         """Инициализирует LogInterceptor.
 
@@ -98,6 +108,7 @@ class LogInterceptor:
             overflow_strategy: Стратегия при переполнении буфера ("FIFO").
             filters: Список фильтров для применения к новым строкам.
             config: Объект конфигурации для расширенных настроек.
+            add_timestamps: Если True, добавляет ISO 8601 timestamp к строкам в target_file.
 
         Raises:
             FileNotFoundError: Если source_file не существует и allow_missing=False.
@@ -129,6 +140,10 @@ class LogInterceptor:
         self._buffer_lock = threading.Lock()
         self._overflow_strategy = overflow_strategy
 
+        # Инициализируем буфер метаданных
+        self._metadata_buffer: deque[LineMetadata] = deque(maxlen=buffer_size)
+        self._metadata_lock = threading.Lock()
+
         # Инициализируем фильтры
         self._filters: Sequence[BaseFilter] = filters if filters else []
 
@@ -136,6 +151,9 @@ class LogInterceptor:
         self._callbacks: list[CallbackType] = []
         self._callbacks_lock = threading.Lock()
         self._event_counter = 0
+
+        # Настройки timestamp
+        self._add_timestamps = add_timestamps
 
         # Инициализируем позицию в файле (если файл существует)
         if self.source_file.exists():
@@ -208,6 +226,16 @@ class LogInterceptor:
         with self._buffer_lock:
             self._buffer.clear()
 
+    def get_lines_with_metadata(self) -> list[LineMetadata]:
+        """Возвращает список строк с метаданными.
+
+        Returns:
+            Список словарей с ключами: line, timestamp, event_id.
+
+        """
+        with self._metadata_lock:
+            return list(self._metadata_buffer)
+
     def add_callback(self, callback: CallbackType) -> None:
         """Добавляет callback функцию для уведомления о новых строках.
 
@@ -260,19 +288,17 @@ class LogInterceptor:
         """
         self.stop()
 
-    def _invoke_callbacks(self, line: str) -> None:
+    def _invoke_callbacks(self, line: str, timestamp: float, event_id: int) -> None:
         """Вызывает все зарегистрированные callbacks для строки лога.
 
         Args:
             line: Строка лога для передачи в callbacks.
+            timestamp: Временная метка события.
+            event_id: Уникальный идентификатор события.
 
         """
         if not self._callbacks:
             return
-
-        timestamp = time.time()
-        self._event_counter += 1
-        event_id = self._event_counter
 
         # Копируем список callbacks под блокировкой
         with self._callbacks_lock:
@@ -302,7 +328,7 @@ class LogInterceptor:
         # Применяем все фильтры (логика AND)
         return all(filter_obj.filter(line) for filter_obj in self._filters)
 
-    def _process_new_lines(self) -> None:
+    def _process_new_lines(self) -> None:  # noqa: C901
         """Обрабатывает новые строки из лог-файла с обработкой ошибок."""
         try:
             if not self.source_file.exists():
@@ -327,18 +353,39 @@ class LogInterceptor:
 
                 # Обрабатываем каждую отфильтрованную строку
                 for line in filtered_lines:
+                    # Получаем метаданные
+                    timestamp = time.time()
+                    event_id = self._event_counter
+                    self._event_counter += 1
+
+                    # Сохраняем метаданные
+                    metadata: LineMetadata = {
+                        "line": line.rstrip("\n"),
+                        "timestamp": timestamp,
+                        "event_id": event_id,
+                    }
+                    with self._metadata_lock:
+                        self._metadata_buffer.append(metadata)
+
                     # Записываем в буфер (если включён)
                     if self._buffer is not None:
                         with self._buffer_lock:
                             self._buffer.append(line)
 
                     # Вызываем callbacks
-                    self._invoke_callbacks(line)
+                    self._invoke_callbacks(line, timestamp, event_id)
 
                 # Записываем отфильтрованные строки в целевой файл
                 if self.target_file and filtered_lines:
                     with self.target_file.open("a", encoding=self._config.encoding) as f:
-                        f.writelines(filtered_lines)
+                        for line in filtered_lines:
+                            if self._add_timestamps:
+                                # Форматируем timestamp в ISO 8601
+                                dt = datetime.fromtimestamp(time.time(), tz=timezone.utc)
+                                timestamp_str = dt.isoformat()
+                                f.write(f"[CAPTURED_AT: {timestamp_str}] {line}")
+                            else:
+                                f.write(line)
 
                 # Обновляем позицию
                 self._file_position = current_size
