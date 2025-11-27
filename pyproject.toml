@@ -2,17 +2,19 @@
 #
 # SPDX-License-Identifier: MIT
 
+# ---------- build-system ----------
+
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+# ---------- project ----------
 
 [project]
 name = "log-interceptor"
 version = "0.1.0"
 description = "Python library for intercepting and monitoring changes in external log files in real-time"
-authors = [
-  { name = "Hash", email = "hash@example.com" }
-]
+authors = [{ name = "Molokov Klim", email = "ultrakawaii9654449192@gmail.com" }]
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
@@ -38,7 +40,22 @@ dependencies = [
   "typing-extensions>=4.0.0; python_version < '3.11'",
 ]
 
-[project.optional-dependencies]
+[project.urls]
+Homepage = "https://github.com/hash/log-interceptor"
+Documentation = "https://github.com/hash/log-interceptor/blob/main/README.md"
+Repository = "https://github.com/hash/log-interceptor"
+Issues = "https://github.com/hash/log-interceptor/issues"
+
+# ---------- UV ----------
+
+[tool.uv]
+environments = [
+  "sys_platform == 'win32'",
+  "sys_platform == 'windows'",
+  "sys_platform == 'linux'"
+]
+
+[dependency-groups]
 dev = [
   "pytest>=7.4.0",
   "pytest-cov>=4.1.0",
@@ -47,11 +64,6 @@ dev = [
   "pyright>=1.1.0",
 ]
 
-[project.urls]
-Homepage = "https://github.com/hash/log-interceptor"
-Documentation = "https://github.com/hash/log-interceptor/blob/main/README.md"
-Repository = "https://github.com/hash/log-interceptor"
-Issues = "https://github.com/hash/log-interceptor/issues"
 
 # ---------- setuptools ----------
 
@@ -63,13 +75,6 @@ exclude = ["tests*", "docs*"]
 [tool.setuptools.package-data]
 log_interceptor = ["py.typed"]
 
-# ---------- UV ----------
-[tool.uv]
-environments = [
-  "sys_platform == 'win32'",
-  "sys_platform == 'windows'",
-  "sys_platform == 'linux'"
-]
 
 # ---------- RUFF ----------
 [tool.ruff]
@@ -81,44 +86,44 @@ indent-width = 4
 select = ["ALL"]
 
 ignore = [
-  "D203",   # conflict in D
-  "D211",   # conflict in D
-  "D212",   # conflict in D
-  "D213",   # conflict in D
-  "D401",   # annoying - First line should be in imperative mood
-  "E501",   # line too long
+  "D203", # conflict in D
+  "D211", # conflict in D
+  "D212", # conflict in D
+  "D213", # conflict in D
+  "D401", # annoying - First line should be in imperative mood
+  "E501", # line too long
   "ANN401", # Any
-  "S101",   # assert
+  "S101", # assert
   "PGH004", # blanket-noqa
-  "B008",   # do not perform function calls in argument defaults
-  "B904",   # raise from None
+  "B008", # do not perform function calls in argument defaults
+  "B904", # raise from None
   "COM812", # conflict with formatter
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
-  "S101",     # assert allowed in tests
-  "PLR2004",  # magic values allowed in tests
-  "RUF002",   # кириллические буквы в docstrings
-  "TRY301",   # abstract raise to inner function - слишком строго для тестов
+  "S101", # assert allowed in tests
+  "PLR2004", # magic values allowed in tests
+  "RUF002", # кириллические буквы в docstrings
+  "TRY301", # abstract raise to inner function - слишком строго для тестов
 ]
 "log_interceptor/**/*.py" = [
-  "RUF002",   # кириллические буквы в docstrings
+  "RUF002", # кириллические буквы в docstrings
 ]
 "examples/**/*.py" = [
-  "T201",     # print allowed in examples
-  "RUF001",   # кириллические символы в строках
-  "RUF002",   # кириллические буквы в docstrings
-  "RUF003",   # кириллические символы в комментариях
-  "PLW0603",  # global statement allowed in examples
-  "PLR2004",  # magic values allowed in examples
-  "DTZ006",   # datetime without tz allowed in examples
-  "ARG001",   # unused arguments allowed in examples
-  "D100",     # missing module docstring allowed in examples
-  "D103",     # missing function docstring allowed in examples
-  "INP001",   # implicit namespace package allowed in examples
-  "N999",     # invalid module name allowed in examples
-  "ANN201",   # missing return type allowed in examples
+  "T201", # print allowed in examples
+  "RUF001", # кириллические символы в строках
+  "RUF002", # кириллические буквы в docstrings
+  "RUF003", # кириллические символы в комментариях
+  "PLW0603", # global statement allowed in examples
+  "PLR2004", # magic values allowed in examples
+  "DTZ006", # datetime without tz allowed in examples
+  "ARG001", # unused arguments allowed in examples
+  "D100", # missing module docstring allowed in examples
+  "D103", # missing function docstring allowed in examples
+  "INP001", # implicit namespace package allowed in examples
+  "N999", # invalid module name allowed in examples
+  "ANN201", # missing return type allowed in examples
 ]
 
 [tool.ruff.format]
