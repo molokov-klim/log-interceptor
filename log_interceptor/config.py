@@ -1,7 +1,7 @@
-"""Конфигурация для LogInterceptor.
+"""Configuration for LogInterceptor.
 
-Предоставляет класс InterceptorConfig с настройками по умолчанию
-и предустановками (presets) для различных сценариев использования.
+Provides InterceptorConfig class with default settings
+and presets for various usage scenarios.
 """
 
 from __future__ import annotations
@@ -17,17 +17,17 @@ from log_interceptor.exceptions import ConfigurationError
 
 @dataclass(frozen=True)
 class InterceptorConfig:
-    """Конфигурация для LogInterceptor.
+    """Configuration for LogInterceptor.
 
     Attributes:
-        debounce_interval: Интервал debounce для событий файловой системы (в секундах).
-        buffer_size: Размер внутреннего буфера (количество строк).
-        max_file_size: Максимальный размер файла для мониторинга (в байтах), None = без ограничений.
-        encoding: Кодировка файла.
-        follow_rotations: Следовать за ротацией файлов.
-        retry_on_error: Повторять операции при ошибках.
-        retry_max_attempts: Максимальное количество попыток повтора.
-        retry_delay: Задержка между попытками повтора (в секундах).
+        debounce_interval: Debounce interval for file system events (in seconds).
+        buffer_size: Size of internal buffer (number of lines).
+        max_file_size: Maximum file size for monitoring (in bytes), None = no limit.
+        encoding: File encoding.
+        follow_rotations: Follow file rotations.
+        retry_on_error: Retry operations on errors.
+        retry_max_attempts: Maximum number of retry attempts.
+        retry_delay: Delay between retry attempts (in seconds).
 
     """
 
@@ -41,7 +41,7 @@ class InterceptorConfig:
     retry_delay: float = 1.0
 
     def __post_init__(self) -> None:
-        """Валидация параметров после инициализации."""
+        """Validate parameters after initialization."""
         if self.debounce_interval < 0:
             msg = "debounce_interval must be non-negative"
             raise ValueError(msg)
@@ -60,17 +60,17 @@ class InterceptorConfig:
 
     @classmethod
     def from_preset(cls, preset: str, **overrides: Any) -> InterceptorConfig:
-        """Создаёт конфигурацию из предустановки.
+        """Create configuration from preset.
 
         Args:
-            preset: Название предустановки ('aggressive', 'balanced', 'conservative').
-            **overrides: Параметры для переопределения значений из preset.
+            preset: Preset name ('aggressive', 'balanced', 'conservative').
+            **overrides: Parameters to override preset values.
 
         Returns:
-            Экземпляр InterceptorConfig с настройками из preset.
+            InterceptorConfig instance with settings from preset.
 
         Raises:
-            ConfigurationError: Если preset неизвестен.
+            ConfigurationError: If preset is unknown.
 
         """
         presets: dict[str, dict[str, float | int]] = {
@@ -98,6 +98,6 @@ class InterceptorConfig:
             msg = f"Unknown preset: {preset}. Available: {', '.join(presets.keys())}"
             raise ConfigurationError(msg)
 
-        # Объединяем preset и переопределения
+        # Merge preset and overrides
         config_dict: dict[str, Any] = {**presets[preset], **overrides}
         return cls(**config_dict)

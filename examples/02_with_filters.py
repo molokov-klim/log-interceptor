@@ -16,7 +16,7 @@ from log_interceptor.filters import CompositeFilter, PredicateFilter, RegexFilte
 source_file = Path("app.log")
 source_file.touch()
 
-# Симулируем разные типы логов
+# Simulate different log types
 with source_file.open("w") as f:
     f.write("INFO: Application started\n")
     f.write("DEBUG: Loading module A\n")
@@ -27,7 +27,7 @@ with source_file.open("w") as f:
     f.write("ERROR: Invalid user input\n")
     f.write("CRITICAL: System overload\n")
 
-# Пример 1: Только ERROR строки
+# Example 1: Only ERROR lines
 print("=== Пример 1: Только ERROR ===")
 error_filter = RegexFilter(r"ERROR", mode="whitelist")
 
@@ -43,7 +43,7 @@ with LogInterceptor(
     for line in lines:
         print(f"  {line.strip()}")
 
-# Пример 2: Исключить DEBUG
+# Example 2: Exclude DEBUG
 print("\n=== Пример 2: Без DEBUG ===")
 no_debug = RegexFilter(r"DEBUG", mode="blacklist")
 
@@ -59,7 +59,7 @@ with LogInterceptor(
     for line in lines:
         print(f"  {line.strip()}")
 
-# Пример 3: ERROR ИЛИ CRITICAL
+# Example 3: ERROR OR CRITICAL
 print("\n=== Пример 3: ERROR или CRITICAL ===")
 critical_filter = CompositeFilter([
     RegexFilter(r"ERROR"),
@@ -78,16 +78,16 @@ with LogInterceptor(
     for line in lines:
         print(f"  {line.strip()}")
 
-# Пример 4: Комплексный фильтр
+# Example 4: Complex filter
 print("\n=== Пример 4: Комплексный фильтр ===")
 complex_filter = CompositeFilter([
-    # Должно быть ERROR, WARNING или CRITICAL
+    # Must be ERROR, WARNING or CRITICAL
     CompositeFilter([
         RegexFilter(r"ERROR"),
         RegexFilter(r"WARNING"),
         RegexFilter(r"CRITICAL")
     ], mode="OR"),
-    # И строка должна содержать больше 30 символов
+    # And line must contain more than 30 characters
     PredicateFilter(lambda line: len(line) > 30)
 ], mode="AND")
 

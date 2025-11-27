@@ -1,4 +1,4 @@
-"""Конфигурация pytest и общие фикстуры для тестов."""
+"""Pytest configuration and common fixtures for tests."""
 
 from __future__ import annotations
 
@@ -16,13 +16,13 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def log_interceptor(tmp_path: Path) -> Generator[LogInterceptor, None, None]:
-    """Фикстура для LogInterceptor с временными файлами.
+    """Fixture for LogInterceptor with temporary files.
 
     Args:
-        tmp_path: Временная директория pytest.
+        tmp_path: Pytest temporary directory.
 
     Yields:
-        Настроенный экземпляр LogInterceptor.
+        Configured LogInterceptor instance.
 
     """
     source_file = tmp_path / "app.log"
@@ -37,13 +37,13 @@ def log_interceptor(tmp_path: Path) -> Generator[LogInterceptor, None, None]:
 
 @pytest.fixture
 def mock_log_writer(tmp_path: Path) -> Generator[MockLogWriter, None, None]:
-    """Фикстура для MockLogWriter.
+    """Fixture for MockLogWriter.
 
     Args:
-        tmp_path: Временная директория pytest.
+        tmp_path: Pytest temporary directory.
 
     Yields:
-        Настроенный экземпляр MockLogWriter.
+        Configured MockLogWriter instance.
 
     """
     log_file = tmp_path / "app.log"

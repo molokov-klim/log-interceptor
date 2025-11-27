@@ -16,14 +16,14 @@ from log_interceptor import LogInterceptor
 source_file = Path("app.log")
 source_file.touch()
 
-# Счетчики для статистики
+# Counters for statistics
 error_count = 0
 warning_count = 0
 all_events = []
 
 
 def on_error(line: str, timestamp: float, event_id: int) -> None:
-    """Callback для обработки ошибок."""
+    """Handle error callbacks."""
     global error_count
     if "ERROR" in line:
         error_count += 1
@@ -32,7 +32,7 @@ def on_error(line: str, timestamp: float, event_id: int) -> None:
 
 
 def on_warning(line: str, timestamp: float, event_id: int) -> None:
-    """Callback для обработки предупреждений."""
+    """Handle warning callbacks."""
     global warning_count
     if "WARNING" in line:
         warning_count += 1
@@ -40,7 +40,7 @@ def on_warning(line: str, timestamp: float, event_id: int) -> None:
 
 
 def collect_all(line: str, timestamp: float, event_id: int) -> None:
-    """Callback для сбора всех событий."""
+    """Collect all events."""
     all_events.append({
         "event_id": event_id,
         "timestamp": timestamp,
@@ -50,7 +50,7 @@ def collect_all(line: str, timestamp: float, event_id: int) -> None:
 
 print("=== Callbacks в действии ===\n")
 
-# Создаем interceptor и регистрируем callbacks
+# Create interceptor and register callbacks
 interceptor = LogInterceptor(source_file=source_file, use_buffer=True)
 interceptor.add_callback(on_error)
 interceptor.add_callback(on_warning)
@@ -58,7 +58,7 @@ interceptor.add_callback(collect_all)
 
 interceptor.start()
 
-# Симулируем логи
+# Simulate logs
 print("Генерируем логи...\n")
 with source_file.open("w") as f:
     f.write("INFO: Application started\n")
@@ -86,19 +86,19 @@ with source_file.open("w") as f:
 
 interceptor.stop()
 
-# Статистика
+# Statistics
 print("\n=== Статистика ===")
 print(f"Всего событий: {len(all_events)}")
 print(f"Ошибок: {error_count}")
 print(f"Предупреждений: {warning_count}")
 
-# Показать все события с метаданными
+# Show all events with metadata
 print("\n=== Все события ===")
 for event in all_events:
     dt = datetime.fromtimestamp(event["timestamp"])
     print(f"[{event['event_id']}] {dt.strftime('%H:%M:%S.%f')[:-3]} - {event['line']}")
 
-# Пример: удаление callback
+# Example: removing callback
 print("\n=== Удаление callback ===")
 interceptor.remove_callback(on_error)
 interceptor.remove_callback(on_warning)

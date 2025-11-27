@@ -1,1 +1,1 @@
-"""Тесты для LogInterceptor."""
+"""Tests for LogInterceptor."""

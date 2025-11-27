@@ -64,7 +64,7 @@ def test_interceptor_double_start_raises(tmp_path: Path) -> None:
     interceptor = LogInterceptor(source_file=log_file)
     interceptor.start()
 
-    error_msg = r"LogInterceptor уже запущен"
+    error_msg = r"LogInterceptor is already running"
     with pytest.raises(RuntimeError, match=error_msg):
         interceptor.start()
 

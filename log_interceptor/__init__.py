@@ -1,16 +1,16 @@
-"""LogInterceptor - библиотека для перехвата и мониторинга лог-файлов в реальном времени.
+"""LogInterceptor - library for real-time log file interception and monitoring.
 
-Основные компоненты:
-    - LogInterceptor: Основной класс для мониторинга лог-файлов
-    - InterceptorConfig: Класс конфигурации
-    - Фильтры: BaseFilter, RegexFilter, PredicateFilter, CompositeFilter
-    - Исключения: LogInterceptorError, FileWatchError, FilterError, LogBufferError, ConfigurationError
+Main components:
+    - LogInterceptor: Main class for log file monitoring
+    - InterceptorConfig: Configuration class
+    - Filters: BaseFilter, RegexFilter, PredicateFilter, CompositeFilter
+    - Exceptions: LogInterceptorError, FileWatchError, FilterError, LogBufferError, ConfigurationError
 
-Пример использования:
+Usage example:
     >>> from log_interceptor import LogInterceptor
     >>> interceptor = LogInterceptor(source_file="app.log", target_file="captured.log")
     >>> interceptor.start()
-    >>> # ... мониторинг работает ...
+    >>> # ... monitoring is running ...
     >>> interceptor.stop()
 """
 

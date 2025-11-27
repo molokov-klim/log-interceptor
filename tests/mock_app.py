@@ -1,6 +1,6 @@
-"""Mock-объект для имитации внешнего приложения, записывающего логи.
+"""Mock object for simulating external application writing logs.
 
-Используется в тестах для создания контролируемых сценариев записи логов.
+Used in tests to create controlled log writing scenarios.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class MockLogWriter:
-    """Имитирует внешнее приложение, записывающее логи в файл."""
+    """Simulates external application writing logs to file."""
 
     def __init__(
         self,
@@ -31,12 +31,12 @@ class MockLogWriter:
         thread_mode: bool = False,
         write_delay: float = 0.0,
     ) -> None:
-        """Инициализирует MockLogWriter.
+        """Initialize MockLogWriter.
 
         Args:
-            log_file_path: Путь к файлу для записи логов.
-            thread_mode: Если True, работает в отдельном потоке.
-            write_delay: Задержка перед каждой записью (в секундах).
+            log_file_path: Path to log file for writing.
+            thread_mode: If True, runs in separate thread.
+            write_delay: Delay before each write (in seconds).
 
         """
         self.log_file = Path(log_file_path)
@@ -48,7 +48,7 @@ class MockLogWriter:
         self._rotation_counter = 0
 
     def start(self) -> None:
-        """Запускает writer в режиме потока."""
+        """Start writer in thread mode."""
         if not self.thread_mode:
             msg = "start() доступен только в thread_mode=True"
             raise RuntimeError(msg)
@@ -61,7 +61,7 @@ class MockLogWriter:
         self._thread.start()
 
     def stop(self) -> None:
-        """Останавливает writer в режиме потока."""
+        """Stop writer in thread mode."""
         if not self.thread_mode:
             msg = "stop() доступен только в thread_mode=True"
             raise RuntimeError(msg)
@@ -75,7 +75,7 @@ class MockLogWriter:
             self._thread = None
 
     def is_running(self) -> bool:
-        """Проверяет, работает ли writer.
+        """Check if writer is running.
 
         Returns:
             True если writer запущен, иначе False.
@@ -84,7 +84,7 @@ class MockLogWriter:
         return self._running
 
     def write_line(self, line: str) -> None:
-        """Записывает строку в лог-файл.
+        """Write line to log file.
 
         Args:
             line: Строка для записи.
@@ -96,10 +96,10 @@ class MockLogWriter:
             self._write_to_file(line)
 
     def _write_to_file(self, line: str) -> None:
-        """Внутренний метод для записи в файл.
+        """Write line to file internally.
 
         Args:
-            line: Строка для записи.
+            line: Line to write.
 
         """
         if self.write_delay > 0:
@@ -109,7 +109,7 @@ class MockLogWriter:
             f.write(f"{line}\n")
 
     def _worker(self) -> None:
-        """Рабочий поток для записи логов."""
+        """Worker thread for writing logs."""
         while self._running:
             line = self._queue.get()
             if line is None:  # Сигнал остановки
@@ -117,7 +117,7 @@ class MockLogWriter:
             self._write_to_file(line)
 
     def write_burst(self, lines: list[str], interval: float = 0.0) -> None:
-        """Записывает несколько строк с заданным интервалом.
+        """Write multiple lines with given interval.
 
         Args:
             lines: Список строк для записи.
@@ -130,7 +130,7 @@ class MockLogWriter:
                 time.sleep(interval)
 
     def rotate_file(self) -> Path:
-        """Имитирует ротацию лог-файла.
+        """Simulate log file rotation.
 
         Переименовывает текущий файл с добавлением суффикса и создаёт новый пустой файл.
 
@@ -151,7 +151,7 @@ class MockLogWriter:
         return rotated_path
 
     def __enter__(self) -> Self:
-        """Вход в context manager.
+        """Enter context manager.
 
         Returns:
             Экземпляр MockLogWriter.
@@ -167,7 +167,7 @@ class MockLogWriter:
         exc_val: BaseException | None,
         exc_tb: types.TracebackType | None,
     ) -> None:
-        """Выход из context manager.
+        """Exit context manager.
 
         Args:
             exc_type: Тип исключения.
@@ -179,10 +179,10 @@ class MockLogWriter:
             self.stop()
 
     def __repr__(self) -> str:
-        """Строковое представление объекта.
+        """Return string representation.
 
         Returns:
-            Строковое представление MockLogWriter.
+            String representation of MockLogWriter.
 
         """
         status = "running" if self._running else "stopped"
@@ -190,7 +190,7 @@ class MockLogWriter:
         return f"MockLogWriter(file={self.log_file.name}, mode={mode}, status={status})"
 
     def get_line_count(self) -> int:
-        """Возвращает количество строк в файле.
+        """Return number of lines in file.
 
         Returns:
             Количество строк в лог-файле.

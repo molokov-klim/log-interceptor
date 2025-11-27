@@ -16,7 +16,7 @@ from log_interceptor import LogInterceptor
 from log_interceptor.filters import RegexFilter
 
 
-# Пример 1: Простая фикстура
+# Example 1: Simple fixture
 @pytest.fixture
 def log_interceptor(tmp_path: Path):
     """Фикстура для перехвата логов."""
@@ -35,7 +35,7 @@ def log_interceptor(tmp_path: Path):
         interceptor.stop()
 
 
-# Пример 2: Фикстура с фильтром
+# Example 2: Fixture with filter
 @pytest.fixture
 def error_interceptor(tmp_path: Path):
     """Фикстура для перехвата только ошибок."""
@@ -55,26 +55,26 @@ def error_interceptor(tmp_path: Path):
     interceptor.stop()
 
 
-# Пример теста 1: Проверка логирования
+# Test example 1: Check logging
 def test_application_logs_startup(log_interceptor: LogInterceptor):
     """Проверяем что приложение логирует старт."""
-    # Симулируем приложение
+    # Simulate application
     with log_interceptor.source_file.open("a") as f:
         f.write("INFO: Application started\n")
         f.write("INFO: Configuration loaded\n")
 
     time.sleep(0.3)
 
-    # Проверяем логи
+    # Check logs
     lines = log_interceptor.get_buffered_lines()
     assert len(lines) >= 2
     assert any("started" in line.lower() for line in lines)
 
 
-# Пример теста 2: Проверка ошибок
+# Test example 2: Check errors
 def test_application_handles_errors(error_interceptor: LogInterceptor):
     """Проверяем что приложение логирует ошибки."""
-    # Симулируем приложение с ошибками
+    # Simulate application с ошибками
     with error_interceptor.source_file.open("a") as f:
         f.write("INFO: Processing request\n")
         f.write("ERROR: Database connection failed\n")
@@ -83,13 +83,13 @@ def test_application_handles_errors(error_interceptor: LogInterceptor):
 
     time.sleep(0.3)
 
-    # Проверяем что все ошибки захвачены
+    # Check that all errors are captured
     lines = error_interceptor.get_buffered_lines()
     assert len(lines) >= 2
     assert all("ERROR" in line for line in lines)
 
 
-# Пример теста 3: Статистика
+# Test example 3: Statistics
 def test_interceptor_statistics(log_interceptor: LogInterceptor):
     """Проверяем сбор статистики."""
     # Генерируем логи

@@ -1,7 +1,7 @@
-"""Основной модуль LogInterceptor для мониторинга и перехвата лог-файлов.
+"""Main LogInterceptor module for log file monitoring and interception.
 
-Предоставляет класс LogInterceptor для отслеживания изменений в лог-файлах
-в реальном времени с использованием watchdog.
+Provides LogInterceptor class for tracking log file changes
+in real-time using watchdog.
 """
 
 from __future__ import annotations
@@ -35,53 +35,53 @@ if TYPE_CHECKING:
 
 
 class LineMetadata(TypedDict):
-    """Метаданные для строки лога."""
+    """Metadata for log line."""
 
     line: str
     timestamp: float
     event_id: int
 
-# Тип для callback функций
+# Type for callback functions
 CallbackType = Callable[[str, float, int], None]
 
-# Настраиваем логгер для внутренних ошибок
+# Configure logger for internal errors
 logger = logging.getLogger(__name__)
 
 
 class _LogFileEventHandler(FileSystemEventHandler):
-    """Обработчик событий файловой системы для мониторинга лог-файла."""
+    """File system event handler for log file monitoring."""
 
     def __init__(self, interceptor: "LogInterceptor") -> None:  # noqa: UP037
-        """Инициализирует обработчик событий.
+        """Initialize event handler.
 
         Args:
-            interceptor: Экземпляр LogInterceptor, который использует этот обработчик.
+            interceptor: LogInterceptor instance that uses this handler.
 
         """
         super().__init__()
         self.interceptor = interceptor
 
     def on_modified(self, event: FileSystemEvent) -> None:
-        """Вызывается при изменении файла.
+        """Handle file modification event.
 
         Args:
-            event: Событие изменения файла.
+            event: File modification event.
 
         """
         if event.is_directory:
             return
 
-        # Проверяем, что изменился именно наш файл
+        # Check that our file was modified
         event_path = str(event.src_path) if isinstance(event.src_path, bytes) else event.src_path
         if Path(event_path).resolve() == self.interceptor.source_file.resolve():
             self.interceptor._process_new_lines()  # noqa: SLF001  # pyright: ignore[reportPrivateUsage]
 
 
 class LogInterceptor:
-    """Перехватчик логов для мониторинга изменений в файлах в реальном времени.
+    """Log interceptor for monitoring file changes in real-time.
 
-    Использует watchdog для отслеживания изменений файловой системы
-    и захватывает новые строки из лог-файла.
+    Uses watchdog to track file system changes
+    and captures new lines from log file.
     """
 
     def __init__(  # noqa: PLR0913
@@ -97,21 +97,21 @@ class LogInterceptor:
         config: InterceptorConfig | None = None,
         add_timestamps: bool = False,
     ) -> None:
-        """Инициализирует LogInterceptor.
+        """Initialize LogInterceptor.
 
         Args:
-            source_file: Путь к исходному лог-файлу для мониторинга.
-            target_file: Путь к целевому файлу для записи захваченных строк.
-            allow_missing: Если True, не требует существования файла при инициализации.
-            use_buffer: Если True, включает буферизацию строк в памяти.
-            buffer_size: Максимальный размер буфера в памяти.
-            overflow_strategy: Стратегия при переполнении буфера ("FIFO").
-            filters: Список фильтров для применения к новым строкам.
-            config: Объект конфигурации для расширенных настроек.
-            add_timestamps: Если True, добавляет ISO 8601 timestamp к строкам в target_file.
+            source_file: Path to source log file for monitoring.
+            target_file: Path to target file for writing captured lines.
+            allow_missing: If True, doesn't require file existence at initialization.
+            use_buffer: If True, enables in-memory line buffering.
+            buffer_size: Maximum buffer size in memory.
+            overflow_strategy: Buffer overflow strategy ("FIFO").
+            filters: List of filters to apply to new lines.
+            config: Configuration object for advanced settings.
+            add_timestamps: If True, adds ISO 8601 timestamp to lines in target_file.
 
         Raises:
-            FileNotFoundError: Если source_file не существует и allow_missing=False.
+            FileNotFoundError: If source_file doesn't exist and allow_missing=False.
 
         """
         self.source_file = Path(source_file)
@@ -126,7 +126,7 @@ class LogInterceptor:
         self._observer: "Observer | None" = None  # noqa: UP037  # pyright: ignore[reportInvalidTypeForm]
         self._file_position = 0
 
-        # Статистика
+        # Statistics
         self._lines_captured = 0
         self._events_processed = 0
         self._start_time: float | None = None
@@ -134,7 +134,7 @@ class LogInterceptor:
         # Debounce mechanism
         self._last_event_time: float | None = None
 
-        # Сохраняем конфигурацию или используем значения по умолчанию
+        # Save configuration or use default values
         if config:
             from log_interceptor.config import InterceptorConfig  # noqa: PLC0415
 
@@ -144,54 +144,54 @@ class LogInterceptor:
 
             self._config = InterceptorConfig()
 
-        # Инициализируем буфер в памяти
+        # Initialize in-memory buffer
         self._buffer: deque[str] | None = deque(maxlen=buffer_size) if use_buffer else None
         self._buffer_lock = threading.Lock()
         self._overflow_strategy = overflow_strategy
 
-        # Инициализируем буфер метаданных
+        # Initialize metadata buffer
         self._metadata_buffer: deque[LineMetadata] = deque(maxlen=buffer_size)
         self._metadata_lock = threading.Lock()
 
-        # Инициализируем фильтры
+        # Initialize filters
         self._filters: Sequence[BaseFilter] = filters if filters else []
 
-        # Инициализируем callback систему
+        # Initialize callback system
         self._callbacks: list[CallbackType] = []
         self._callbacks_lock = threading.Lock()
         self._event_counter = 0
 
-        # Настройки timestamp
+        # Timestamp settings
         self._add_timestamps = add_timestamps
 
-        # Инициализируем позицию в файле (если файл существует)
+        # Initialize file position (if file exists)
         if self.source_file.exists():
             self._file_position = self.source_file.stat().st_size
 
     def is_running(self) -> bool:
-        """Проверяет, запущен ли мониторинг.
+        """Check if monitoring is running.
 
         Returns:
-            True, если мониторинг активен, иначе False.
+            True if monitoring is active, False otherwise.
 
         """
         return self._running
 
     def start(self) -> None:
-        """Запускает мониторинг лог-файла.
+        """Start log file monitoring.
 
         Raises:
-            RuntimeError: Если мониторинг уже запущен.
+            RuntimeError: If monitoring is already running.
 
         """
         if self._running:
-            msg = "LogInterceptor уже запущен"
+            msg = "LogInterceptor is already running"
             raise RuntimeError(msg)
 
         self._running = True
         self._start_time = time.time()
 
-        # Создаём и запускаем watchdog observer
+        # Create and start watchdog observer
         from watchdog.observers import Observer as WatchdogObserver  # noqa: PLC0415
 
         self._observer = WatchdogObserver()  # pyright: ignore[reportUnknownMemberType]
@@ -201,23 +201,23 @@ class LogInterceptor:
         self._observer.start()  # pyright: ignore[reportUnknownMemberType, reportOptionalMemberAccess]
 
     def stop(self) -> None:
-        """Останавливает мониторинг лог-файла."""
+        """Stop log file monitoring."""
         if not self._running:
             return
 
         self._running = False
 
-        # Останавливаем observer
+        # Stop observer
         if self._observer:  # pyright: ignore[reportUnknownMemberType]
             self._observer.stop()  # pyright: ignore[reportUnknownMemberType]
             self._observer.join(timeout=1.0)  # pyright: ignore[reportUnknownMemberType]
             self._observer = None
 
     def get_buffered_lines(self) -> Sequence[str]:
-        """Возвращает текущее содержимое буфера в памяти.
+        """Return current in-memory buffer contents.
 
         Returns:
-            Список строк из буфера. Пустой список, если буферизация не включена.
+            List of lines from buffer. Empty list if buffering is not enabled.
 
         """
         if not self._buffer:
@@ -226,9 +226,9 @@ class LogInterceptor:
             return list(self._buffer)
 
     def clear_buffer(self) -> None:
-        """Очищает буфер в памяти.
+        """Clear in-memory buffer.
 
-        Удаляет все строки из буфера. Если буферизация не включена, ничего не делает.
+        Removes all lines from buffer. Does nothing if buffering is not enabled.
 
         """
         if not self._buffer:
@@ -237,37 +237,37 @@ class LogInterceptor:
             self._buffer.clear()
 
     def get_lines_with_metadata(self) -> list[LineMetadata]:
-        """Возвращает список строк с метаданными.
+        """Return list of lines with metadata.
 
         Returns:
-            Список словарей с ключами: line, timestamp, event_id.
+            List of dictionaries with keys: line, timestamp, event_id.
 
         """
         with self._metadata_lock:
             return list(self._metadata_buffer)
 
     def pause(self) -> None:
-        """Приостанавливает захват новых строк без остановки watchdog."""
+        """Pause capturing new lines without stopping watchdog."""
         self._paused = True
 
     def resume(self) -> None:
-        """Возобновляет захват новых строк после паузы."""
+        """Resume capturing new lines after pause."""
         self._paused = False
 
     def is_paused(self) -> bool:
-        """Проверяет, находится ли interceptor на паузе.
+        """Check if interceptor is paused.
 
         Returns:
-            True, если на паузе, иначе False.
+            True if paused, False otherwise.
 
         """
         return self._paused
 
     def get_stats(self) -> dict[str, int | float]:
-        """Возвращает статистику работы interceptor.
+        """Return interceptor statistics.
 
         Returns:
-            Словарь со статистикой: lines_captured, events_processed, start_time, uptime_seconds.
+            Dictionary with statistics: lines_captured, events_processed, start_time, uptime_seconds.
 
         """
         uptime = 0.0
@@ -282,10 +282,10 @@ class LogInterceptor:
         }
 
     def add_callback(self, callback: CallbackType) -> None:
-        """Добавляет callback функцию для уведомления о новых строках.
+        """Add callback function for new line notifications.
 
         Args:
-            callback: Функция с сигнатурой (line: str, timestamp: float, event_id: int) -> None
+            callback: Function with signature (line: str, timestamp: float, event_id: int) -> None
 
         """
         with self._callbacks_lock:
@@ -293,10 +293,10 @@ class LogInterceptor:
                 self._callbacks.append(callback)
 
     def remove_callback(self, callback: CallbackType) -> None:
-        """Удаляет callback функцию из списка.
+        """Remove callback function from list.
 
         Args:
-            callback: Функция для удаления.
+            callback: Function to remove.
 
         """
         with self._callbacks_lock:
@@ -304,12 +304,12 @@ class LogInterceptor:
                 self._callbacks.remove(callback)
 
     def __enter__(self) -> Self:
-        """Вход в context manager.
+        """Enter context manager.
 
-        Автоматически запускает мониторинг.
+        Automatically starts monitoring.
 
         Returns:
-            Экземпляр LogInterceptor.
+            LogInterceptor instance.
 
         """
         self.start()
@@ -321,117 +321,117 @@ class LogInterceptor:
         exc_val: BaseException | None,
         exc_tb: types.TracebackType | None,
     ) -> None:
-        """Выход из context manager.
+        """Exit context manager.
 
-        Автоматически останавливает мониторинг и освобождает ресурсы.
+        Automatically stops monitoring and releases resources.
 
         Args:
-            exc_type: Тип исключения (если было).
-            exc_val: Значение исключения (если было).
-            exc_tb: Traceback исключения (если было).
+            exc_type: Exception type (if any).
+            exc_val: Exception value (if any).
+            exc_tb: Exception traceback (if any).
 
         """
         self.stop()
 
     def _invoke_callbacks(self, line: str, timestamp: float, event_id: int) -> None:
-        """Вызывает все зарегистрированные callbacks для строки лога.
+        """Invoke all registered callbacks for log line.
 
         Args:
-            line: Строка лога для передачи в callbacks.
-            timestamp: Временная метка события.
-            event_id: Уникальный идентификатор события.
+            line: Log line to pass to callbacks.
+            timestamp: Event timestamp.
+            event_id: Unique event identifier.
 
         """
         if not self._callbacks:
             return
 
-        # Копируем список callbacks под блокировкой
+        # Copy callbacks list under lock
         with self._callbacks_lock:
             callbacks_copy = self._callbacks.copy()
 
-        # Вызываем callbacks вне блокировки
+        # Invoke callbacks outside lock
         for callback in callbacks_copy:
             try:
                 callback(line, timestamp, event_id)
             except Exception:  # noqa: PERF203
-                # Логируем ошибку, но не прерываем обработку
+                # Log error but don't interrupt processing
                 logger.exception("Error in callback %s", callback.__name__)
 
     def _apply_filters(self, line: str) -> bool:
-        """Применяет фильтры к строке лога.
+        """Apply filters to log line.
 
         Args:
-            line: Строка для фильтрации.
+            line: Line to filter.
 
         Returns:
-            True, если строка прошла все фильтры, иначе False.
+            True if line passed all filters, False otherwise.
 
         """
         if not self._filters:
             return True
 
-        # Применяем все фильтры (логика AND)
+        # Apply all filters (AND logic)
         return all(filter_obj.filter(line) for filter_obj in self._filters)
 
     def _process_new_lines(self) -> None:  # noqa: C901, PLR0912, PLR0915
-        """Обрабатывает новые строки из лог-файла с обработкой ошибок."""
+        """Process new lines from log file with error handling."""
         try:
             if not self.source_file.exists():
                 return
 
-            # Debounce mechanism: проверяем, прошло ли достаточно времени с последнего события
+            # Debounce mechanism: check if enough time passed since last event
             current_time = time.time()
             is_debounced_event = False
             if self._last_event_time is not None:
                 time_since_last = current_time - self._last_event_time
                 if time_since_last < self._config.debounce_interval:
-                    # Событие слишком близко к предыдущему, отмечаем как дебаунсед
+                    # Event is too close to previous, mark as debounced
                     is_debounced_event = True
                 else:
-                    # Прошло достаточно времени, обновляем время
+                    # Enough time passed, update time
                     self._last_event_time = current_time
             else:
-                # Первое событие
+                # First event
                 self._last_event_time = current_time
 
-            # Если на паузе, обновляем позицию но не обрабатываем строки
+            # If paused, update position but don't process lines
             if self._paused:
                 current_size = self.source_file.stat().st_size
                 self._file_position = current_size
                 return
 
-            # Получаем текущий размер файла
+            # Get current file size
             current_size = self.source_file.stat().st_size
 
-            # Если файл был усечён (truncated) или ротирован, сбрасываем позицию
+            # If file was truncated or rotated, reset position
             if current_size < self._file_position:
                 logger.info("File rotation detected for %s, resetting position", self.source_file)
                 self._file_position = 0
 
-            # Читаем новые строки
+            # Read new lines
             if current_size > self._file_position:
                 with self.source_file.open("r", encoding=self._config.encoding) as f:
                     f.seek(self._file_position)
                     new_lines = f.readlines()
 
-                # Применяем фильтры к строкам
+                # Apply filters to lines
                 filtered_lines = [line for line in new_lines if self._apply_filters(line)]
 
-                # Увеличиваем счетчики
+                # Increment counters
                 if filtered_lines:
                     self._lines_captured += len(filtered_lines)
-                    # Увеличиваем events_processed только если это не дебаунсед событие
+                    # Increment events_processed only if not debounced event
                     if not is_debounced_event:
                         self._events_processed += 1
 
-                # Обрабатываем каждую отфильтрованную строку
+                # Process each filtered line
                 for line in filtered_lines:
-                    # Получаем метаданные
+                    # Get metadata
                     timestamp = time.time()
                     event_id = self._event_counter
                     self._event_counter += 1
 
-                    # Сохраняем метаданные
+                    # Save metadata
                     metadata: LineMetadata = {
                         "line": line.rstrip("\n"),
                         "timestamp": timestamp,
@@ -440,27 +440,27 @@ class LogInterceptor:
                     with self._metadata_lock:
                         self._metadata_buffer.append(metadata)
 
-                    # Записываем в буфер (если включён)
+                    # Write to buffer (if enabled)
                     if self._buffer is not None:
                         with self._buffer_lock:
                             self._buffer.append(line)
 
-                    # Вызываем callbacks
+                    # Invoke callbacks
                     self._invoke_callbacks(line, timestamp, event_id)
 
-                # Записываем отфильтрованные строки в целевой файл
+                # Write filtered lines to target file
                 if self.target_file and filtered_lines:
                     with self.target_file.open("a", encoding=self._config.encoding) as f:
                         for line in filtered_lines:
                             if self._add_timestamps:
-                                # Форматируем timestamp в ISO 8601
+                                # Format timestamp as ISO 8601
                                 dt = datetime.fromtimestamp(time.time(), tz=timezone.utc)
                                 timestamp_str = dt.isoformat()
                                 f.write(f"[CAPTURED_AT: {timestamp_str}] {line}")
                             else:
                                 f.write(line)
 
-                # Обновляем позицию
+                # Update position
                 self._file_position = current_size
 
         except PermissionError:

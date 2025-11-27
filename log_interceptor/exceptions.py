@@ -1,60 +1,60 @@
-"""Пользовательские исключения для LogInterceptor.
+"""Custom exceptions for LogInterceptor.
 
-Иерархия исключений:
-    LogInterceptorError (базовое)
-    ├── FileWatchError (ошибки мониторинга файлов)
-    ├── FilterError (ошибки фильтрации)
-    ├── BufferError (ошибки буферизации)
-    └── ConfigurationError (ошибки конфигурации)
+Exception hierarchy:
+    LogInterceptorError (base)
+    ├── FileWatchError (file monitoring errors)
+    ├── FilterError (filtering errors)
+    ├── BufferError (buffering errors)
+    └── ConfigurationError (configuration errors)
 """
 
 from __future__ import annotations
 
 
 class LogInterceptorError(Exception):
-    """Базовое исключение для всех ошибок LogInterceptor.
+    """Base exception for all LogInterceptor errors.
 
-    Все специфичные исключения библиотеки наследуются от этого класса,
-    что позволяет легко ловить любые ошибки LogInterceptor.
+    All library-specific exceptions inherit from this class,
+    making it easy to catch any LogInterceptor errors.
     """
 
 
 class FileWatchError(LogInterceptorError):
-    """Исключение для ошибок при мониторинге файлов.
+    """Exception for file monitoring errors.
 
-    Возникает при проблемах с:
-    - Отсутствием файла
-    - Недостаточными правами доступа
-    - Ошибками файловой системы
-    - Проблемах с watchdog
+    Raised when issues occur with:
+    - Missing files
+    - Insufficient access permissions
+    - File system errors
+    - Watchdog problems
     """
 
 
 class FilterError(LogInterceptorError):
-    """Исключение для ошибок при фильтрации логов.
+    """Exception for log filtering errors.
 
-    Возникает при проблемах с:
-    - Некорректными регулярными выражениями
-    - Ошибками в функциях-предикатах
-    - Неверной конфигурацией фильтров
+    Raised when issues occur with:
+    - Invalid regular expressions
+    - Errors in predicate functions
+    - Incorrect filter configuration
     """
 
 
 class LogBufferError(LogInterceptorError):
-    """Исключение для ошибок буферизации.
+    """Exception for buffering errors.
 
-    Возникает при проблемах с:
-    - Переполнением буфера
-    - Некорректным размером буфера
-    - Ошибками чтения/записи буфера
+    Raised when issues occur with:
+    - Buffer overflow
+    - Invalid buffer size
+    - Buffer read/write errors
     """
 
 
 class ConfigurationError(LogInterceptorError):
-    """Исключение для ошибок конфигурации.
+    """Exception for configuration errors.
 
-    Возникает при проблемах с:
-    - Некорректными параметрами конфигурации
-    - Неизвестными пресетами
-    - Конфликтующими настройками
+    Raised when issues occur with:
+    - Invalid configuration parameters
+    - Unknown presets
+    - Conflicting settings
     """

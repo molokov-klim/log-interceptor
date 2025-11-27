@@ -1,7 +1,7 @@
-"""Система фильтров для LogInterceptor.
+"""Filter system for LogInterceptor.
 
-Предоставляет базовый интерфейс и различные реализации фильтров
-для фильтрации строк логов по различным критериям.
+Provides base interface and various filter implementations
+for filtering log lines by different criteria.
 """
 
 from __future__ import annotations
@@ -15,34 +15,34 @@ if TYPE_CHECKING:
 
 
 class BaseFilter(ABC):
-    """Абстрактный базовый класс для всех фильтров.
+    """Abstract base class for all filters.
 
-    Все фильтры должны наследоваться от этого класса и реализовывать
-    метод filter() для определения логики фильтрации.
+    All filters must inherit from this class and implement
+    the filter() method to define filtering logic.
     """
 
     @abstractmethod
     def filter(self, line: str) -> bool:
-        """Проверяет, должна ли строка быть включена.
+        """Check if line should be included.
 
         Args:
-            line: Строка для проверки.
+            line: Line to check.
 
         Returns:
-            True если строка должна быть включена, False иначе.
+            True if line should be included, False otherwise.
 
         """
 
 
 class RegexFilter(BaseFilter):
-    """Фильтр на основе регулярных выражений.
+    """Regular expression based filter.
 
-    Фильтрует строки по регулярному выражению с поддержкой
-    режимов whitelist (включать совпадения) и blacklist (исключать совпадения).
+    Filters lines by regular expression with support for
+    whitelist (include matches) and blacklist (exclude matches) modes.
 
     Attributes:
-        pattern: Скомпилированное регулярное выражение.
-        mode: Режим фильтрации ('whitelist' или 'blacklist').
+        pattern: Compiled regular expression.
+        mode: Filtering mode ('whitelist' or 'blacklist').
 
     """
 
@@ -53,17 +53,17 @@ class RegexFilter(BaseFilter):
         mode: Literal["whitelist", "blacklist"] = "whitelist",
         case_sensitive: bool = True,
     ) -> None:
-        """Инициализирует RegexFilter.
+        """Initialize RegexFilter.
 
         Args:
-            pattern: Регулярное выражение для фильтрации.
-            mode: Режим фильтрации:
-                - 'whitelist': включать только совпадающие строки
-                - 'blacklist': исключать совпадающие строки
-            case_sensitive: Учитывать регистр при сопоставлении.
+            pattern: Regular expression for filtering.
+            mode: Filtering mode:
+                - 'whitelist': include only matching lines
+                - 'blacklist': exclude matching lines
+            case_sensitive: Consider case when matching.
 
         Raises:
-            re.error: Если pattern некорректен.
+            re.error: If pattern is invalid.
 
         """
         flags = 0 if case_sensitive else re.IGNORECASE
@@ -71,13 +71,13 @@ class RegexFilter(BaseFilter):
         self.mode = mode
 
     def filter(self, line: str) -> bool:
-        """Проверяет строку по регулярному выражению.
+        """Check line against regular expression.
 
         Args:
-            line: Строка для проверки.
+            line: Line to check.
 
         Returns:
-            True если строка проходит фильтр, False иначе.
+            True if line passes filter, False otherwise.
 
         """
         matches = bool(self.pattern.search(line))
@@ -88,48 +88,48 @@ class RegexFilter(BaseFilter):
 
 
 class PredicateFilter(BaseFilter):
-    """Фильтр на основе пользовательской функции-предиката.
+    """Filter based on custom predicate function.
 
-    Использует произвольную функцию для определения, должна ли строка
-    быть включена в результат.
+    Uses arbitrary function to determine if line should
+    be included in result.
 
     Attributes:
-        predicate: Функция-предикат для проверки строк.
+        predicate: Predicate function for checking lines.
 
     """
 
     def __init__(self, predicate: Callable[[str], bool]) -> None:
-        """Инициализирует PredicateFilter.
+        """Initialize PredicateFilter.
 
         Args:
-            predicate: Функция, принимающая строку и возвращающая bool.
-                      True означает, что строка должна быть включена.
+            predicate: Function that takes string and returns bool.
+                      True means line should be included.
 
         """
         self.predicate = predicate
 
     def filter(self, line: str) -> bool:
-        """Проверяет строку с помощью предиката.
+        """Check line using predicate.
 
         Args:
-            line: Строка для проверки.
+            line: Line to check.
 
         Returns:
-            Результат применения предиката к строке.
+            Result of applying predicate to line.
 
         """
         return self.predicate(line)
 
 
 class CompositeFilter(BaseFilter):
-    """Композитный фильтр для комбинирования нескольких фильтров.
+    """Composite filter for combining multiple filters.
 
-    Поддерживает логические операции AND и OR для объединения
-    результатов нескольких фильтров.
+    Supports AND and OR logical operations for combining
+    results of multiple filters.
 
     Attributes:
-        filters: Список фильтров для комбинирования.
-        mode: Режим комбинирования ('AND' или 'OR').
+        filters: List of filters to combine.
+        mode: Combination mode ('AND' or 'OR').
 
     """
 
@@ -139,31 +139,31 @@ class CompositeFilter(BaseFilter):
         *,
         mode: Literal["AND", "OR"] = "AND",
     ) -> None:
-        """Инициализирует CompositeFilter.
+        """Initialize CompositeFilter.
 
         Args:
-            filters: Список фильтров для комбинирования.
-            mode: Режим комбинирования:
-                - 'AND': строка должна пройти все фильтры
-                - 'OR': строка должна пройти хотя бы один фильтр
+            filters: List of filters to combine.
+            mode: Combination mode:
+                - 'AND': line must pass all filters
+                - 'OR': line must pass at least one filter
 
         """
         self.filters = filters
         self.mode = mode
 
     def filter(self, line: str) -> bool:
-        """Применяет все фильтры к строке согласно режиму.
+        """Apply all filters to line according to mode.
 
         Args:
-            line: Строка для проверки.
+            line: Line to check.
 
         Returns:
-            Результат комбинированной проверки всех фильтров.
+            Result of combined check of all filters.
 
         """
         if not self.filters:
-            # Пустой AND возвращает True (нет условий для проверки)
-            # Пустой OR возвращает False (ни одно условие не выполнено)
+            # Empty AND returns True (no conditions to check)
+            # Empty OR returns False (no conditions satisfied)
             return self.mode == "AND"
 
         if self.mode == "AND":

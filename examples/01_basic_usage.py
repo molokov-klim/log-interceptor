@@ -11,14 +11,14 @@ from pathlib import Path
 
 from log_interceptor import LogInterceptor
 
-# Создаем временные файлы
+# Create temporary files
 source_file = Path("app.log")
 target_file = Path("captured.log")
 
-# Создаем исходный файл
+# Create source file
 source_file.touch()
 
-# Вариант 1: Context Manager (рекомендуется)
+# Option 1: Context Manager (recommended)
 print("=== Context Manager ===")
 with LogInterceptor(
     source_file=source_file,
@@ -26,22 +26,22 @@ with LogInterceptor(
 ) as interceptor:
     print(f"Interceptor запущен: {interceptor.is_running()}")
 
-    # Симулируем запись логов
+    # Simulate log writing
     with source_file.open("a") as f:
         f.write("INFO: Application started\n")
         f.write("DEBUG: Loading configuration\n")
         f.write("INFO: Server listening on port 8080\n")
 
-    time.sleep(0.5)  # Даем время на обработку
+    time.sleep(0.5)  # Give time for processing
 
 print(f"Interceptor остановлен: {interceptor.is_running()}")
 
-# Проверяем результат
+# Check result
 if target_file.exists():
     print("\n=== Захваченные логи ===")
     print(target_file.read_text())
 
-# Вариант 2: Явное управление
+# Option 2: Explicit management
 print("\n=== Явное управление ===")
 interceptor = LogInterceptor(
     source_file=source_file,
@@ -51,7 +51,7 @@ interceptor = LogInterceptor(
 interceptor.start()
 print(f"Interceptor запущен: {interceptor.is_running()}")
 
-# Симулируем еще логи
+# Simulate more logs
 with source_file.open("a") as f:
     f.write("WARNING: High memory usage\n")
     f.write("INFO: Request processed\n")
