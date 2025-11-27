@@ -269,6 +269,7 @@ name = "log-interceptor"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "typing-extensions", marker = "(python_full_version < '3.11' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform == 'win32') or (python_full_version < '3.11' and sys_platform == 'windows')" },
     { name = "watchdog", marker = "sys_platform == 'linux' or sys_platform == 'win32' or sys_platform == 'windows'" },
 ]
 
@@ -289,6 +290,7 @@ requires-dist = [
     { name = "pytest-benchmark", marker = "extra == 'dev'", specifier = ">=4.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'", specifier = ">=4.0.0" },
     { name = "watchdog", specifier = ">=3.0.0" },
 ]
 provides-extras = ["dev"]
