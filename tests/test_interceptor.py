@@ -429,3 +429,39 @@ def test_interceptor_remove_callback(tmp_path: Path) -> None:
 
     # Callback был удален, не должен быть вызван
     assert len(captured_lines) == 0
+
+
+def test_interceptor_context_manager(tmp_path: Path) -> None:
+    """LogInterceptor должен поддерживать with statement."""
+    source_file = tmp_path / "app.log"
+    target_file = tmp_path / "captured.log"
+    source_file.touch()
+
+    with LogInterceptor(source_file=source_file, target_file=target_file) as interceptor:
+        assert interceptor.is_running()
+
+        writer = MockLogWriter(source_file)
+        writer.write_line("Test line")
+        time.sleep(0.3)
+
+    # После выхода из контекста должен быть остановлен
+    assert not interceptor.is_running()
+    assert target_file.exists()
+
+
+def test_interceptor_context_manager_cleanup_on_exception(tmp_path: Path) -> None:
+    """LogInterceptor должен освобождать ресурсы даже при исключении."""
+    source_file = tmp_path / "app.log"
+    source_file.touch()
+
+    interceptor = None
+    try:
+        with LogInterceptor(source_file=source_file) as interceptor:
+            assert interceptor.is_running()
+            msg = "Test exception"
+            raise RuntimeError(msg)
+    except RuntimeError:
+        pass
+
+    assert interceptor is not None
+    assert not interceptor.is_running()

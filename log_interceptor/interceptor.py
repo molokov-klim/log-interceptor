@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 import threading
 import time
 from collections import deque
@@ -16,7 +17,13 @@ from typing import TYPE_CHECKING, Literal
 
 from watchdog.events import FileSystemEventHandler
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 if TYPE_CHECKING:
+    import types
     from collections.abc import Sequence
 
     from watchdog.events import FileSystemEvent
@@ -209,6 +216,36 @@ class LogInterceptor:
         with self._callbacks_lock:
             if callback in self._callbacks:
                 self._callbacks.remove(callback)
+
+    def __enter__(self) -> Self:
+        """Вход в context manager.
+
+        Автоматически запускает мониторинг.
+
+        Returns:
+            Экземпляр LogInterceptor.
+
+        """
+        self.start()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ) -> None:
+        """Выход из context manager.
+
+        Автоматически останавливает мониторинг и освобождает ресурсы.
+
+        Args:
+            exc_type: Тип исключения (если было).
+            exc_val: Значение исключения (если было).
+            exc_tb: Traceback исключения (если было).
+
+        """
+        self.stop()
 
     def _invoke_callbacks(self, line: str) -> None:
         """Вызывает все зарегистрированные callbacks для строки лога.
