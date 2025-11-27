@@ -6,12 +6,16 @@
 
 from __future__ import annotations
 
+import threading
+from collections import deque
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from watchdog.events import FileSystemEventHandler
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from watchdog.events import FileSystemEvent
     from watchdog.observers import Observer
 
@@ -52,12 +56,15 @@ class LogInterceptor:
     и захватывает новые строки из лог-файла.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         source_file: Path | str,
         *,
         target_file: Path | str | None = None,
         allow_missing: bool = False,
+        use_buffer: bool = False,
+        buffer_size: int = 1000,
+        overflow_strategy: Literal["FIFO"] = "FIFO",
     ) -> None:
         """Инициализирует LogInterceptor.
 
@@ -65,6 +72,9 @@ class LogInterceptor:
             source_file: Путь к исходному лог-файлу для мониторинга.
             target_file: Путь к целевому файлу для записи захваченных строк.
             allow_missing: Если True, не требует существования файла при инициализации.
+            use_buffer: Если True, включает буферизацию строк в памяти.
+            buffer_size: Максимальный размер буфера в памяти.
+            overflow_strategy: Стратегия при переполнении буфера ("FIFO").
 
         Raises:
             FileNotFoundError: Если source_file не существует и allow_missing=False.
@@ -80,6 +90,11 @@ class LogInterceptor:
         self._running = False
         self._observer: "Observer | None" = None  # noqa: UP037  # pyright: ignore[reportInvalidTypeForm]
         self._file_position = 0
+
+        # Инициализируем буфер в памяти
+        self._buffer: deque[str] | None = deque(maxlen=buffer_size) if use_buffer else None
+        self._buffer_lock = threading.Lock()
+        self._overflow_strategy = overflow_strategy
 
         # Инициализируем позицию в файле (если файл существует)
         if self.source_file.exists():
@@ -129,6 +144,29 @@ class LogInterceptor:
             self._observer.join(timeout=1.0)  # pyright: ignore[reportUnknownMemberType]
             self._observer = None
 
+    def get_buffered_lines(self) -> Sequence[str]:
+        """Возвращает текущее содержимое буфера в памяти.
+
+        Returns:
+            Список строк из буфера. Пустой список, если буферизация не включена.
+
+        """
+        if not self._buffer:
+            return []
+        with self._buffer_lock:
+            return list(self._buffer)
+
+    def clear_buffer(self) -> None:
+        """Очищает буфер в памяти.
+
+        Удаляет все строки из буфера. Если буферизация не включена, ничего не делает.
+
+        """
+        if not self._buffer:
+            return
+        with self._buffer_lock:
+            self._buffer.clear()
+
     def _process_new_lines(self) -> None:
         """Обрабатывает новые строки из лог-файла."""
         if not self.source_file.exists():
@@ -146,6 +184,12 @@ class LogInterceptor:
             with self.source_file.open("r", encoding="utf-8") as f:
                 f.seek(self._file_position)
                 new_lines = f.readlines()
+
+            # Записываем новые строки в буфер (если включён)
+            if self._buffer is not None and new_lines:
+                with self._buffer_lock:
+                    for line in new_lines:
+                        self._buffer.append(line)
 
             # Записываем новые строки в целевой файл
             if self.target_file and new_lines:
