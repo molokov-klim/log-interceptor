@@ -1,10 +1,10 @@
-"""Пример 3: Использование callbacks.
+"""Example 3: Using callbacks.
 
-Демонстрирует:
-- Регистрацию callback функций
-- Обработку событий в реальном времени
-- Получение timestamp и event_id
-- Множественные callbacks
+Demonstrates:
+- Registering callback functions
+- Real-time event processing
+- Getting timestamp and event_id
+- Multiple callbacks
 """
 
 import time
@@ -48,7 +48,7 @@ def collect_all(line: str, timestamp: float, event_id: int) -> None:
     })
 
 
-print("=== Callbacks в действии ===\n")
+print("=== Callbacks in Action ===\n")
 
 # Create interceptor and register callbacks
 interceptor = LogInterceptor(source_file=source_file, use_buffer=True)
@@ -59,7 +59,7 @@ interceptor.add_callback(collect_all)
 interceptor.start()
 
 # Simulate logs
-print("Генерируем логи...\n")
+print("Generating logs...\n")
 with source_file.open("w") as f:
     f.write("INFO: Application started\n")
     time.sleep(0.1)
@@ -87,19 +87,19 @@ with source_file.open("w") as f:
 interceptor.stop()
 
 # Statistics
-print("\n=== Статистика ===")
-print(f"Всего событий: {len(all_events)}")
-print(f"Ошибок: {error_count}")
-print(f"Предупреждений: {warning_count}")
+print("\n=== Statistics ===")
+print(f"Total events: {len(all_events)}")
+print(f"Errors: {error_count}")
+print(f"Warnings: {warning_count}")
 
 # Show all events with metadata
-print("\n=== Все события ===")
+print("\n=== All Events ===")
 for event in all_events:
     dt = datetime.fromtimestamp(event["timestamp"])
     print(f"[{event['event_id']}] {dt.strftime('%H:%M:%S.%f')[:-3]} - {event['line']}")
 
 # Example: removing callback
-print("\n=== Удаление callback ===")
+print("\n=== Removing Callback ===")
 interceptor.remove_callback(on_error)
 interceptor.remove_callback(on_warning)
 interceptor.remove_callback(collect_all)
@@ -117,11 +117,11 @@ with source_file.open("a") as f:
 
 interceptor.stop()
 
-print(f"Ошибок после удаления: {error_count} (должно быть 0)")
-print(f"Всего событий после удаления: {len(all_events)} (должно быть 0)")
+print(f"Errors after removal: {error_count} (should be 0)")
+print(f"Total events after removal: {len(all_events)} (should be 0)")
 
 # Cleanup
 source_file.unlink()
 
-print("\n✅ Пример завершен!")
+print("\n✅ Example completed!")
 

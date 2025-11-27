@@ -1,10 +1,10 @@
-"""Пример 5: Продвинутые возможности.
+"""Example 5: Advanced features.
 
-Демонстрирует:
-- Pause/Resume для контроля потока
-- Статистику и метаданные
-- Timestamp в файлах
-- Конфигурацию
+Demonstrates:
+- Pause/Resume for flow control
+- Statistics and metadata
+- Timestamps in files
+- Configuration
 """
 
 import time
@@ -17,8 +17,8 @@ source_file = Path("app.log")
 target_file = Path("captured.log")
 source_file.touch()
 
-# Пример 1: Pause/Resume для пакетной обработки
-print("=== Пример 1: Pause/Resume ===\n")
+# Example 1: Pause/Resume for batch processing
+print("=== Example 1: Pause/Resume ===\n")
 
 interceptor = LogInterceptor(
     source_file=source_file,
@@ -27,12 +27,12 @@ interceptor = LogInterceptor(
 )
 interceptor.start()
 
-print("Начинаем мониторинг...")
+print("Starting monitoring...")
 
 for batch in range(3):
-    print(f"\nБатч {batch + 1}:")
+    print(f"\nBatch {batch + 1}:")
 
-    # Генерируем логи
+    # Generate logs
     with source_file.open("a") as f:
         for i in range(5):
             f.write(f"INFO: Batch {batch + 1}, Entry {i + 1}\n")
@@ -40,25 +40,25 @@ for batch in range(3):
 
     time.sleep(0.3)
 
-    # Приостанавливаем для обработки
+    # Pause for processing
     interceptor.pause()
-    print(f"  Пауза для обработки (is_paused={interceptor.is_paused()})")
+    print(f"  Pause for processing (is_paused={interceptor.is_paused()})")
 
-    # Получаем и обрабатываем буфер
+    # Get and process buffer
     lines = interceptor.get_buffered_lines()
-    print(f"  Обработано: {len(lines)} строк")
+    print(f"  Processed: {len(lines)} lines")
 
-    # Очищаем буфер
+    # Clear buffer
     interceptor.clear_buffer()
 
-    # Возобновляем
+    # Resume
     interceptor.resume()
-    print(f"  Возобновлено (is_paused={interceptor.is_paused()})")
+    print(f"  Resumed (is_paused={interceptor.is_paused()})")
 
 interceptor.stop()
 
-# Пример 2: Статистика
-print("\n=== Пример 2: Статистика ===\n")
+# Example 2: Statistics
+print("\n=== Example 2: Statistics ===\n")
 
 interceptor = LogInterceptor(
     source_file=source_file,
@@ -66,7 +66,7 @@ interceptor = LogInterceptor(
 )
 interceptor.start()
 
-# Генерируем активность
+# Generate activity
 with source_file.open("a") as f:
     for i in range(50):
         f.write(f"INFO: Event {i + 1}\n")
@@ -76,19 +76,19 @@ with source_file.open("a") as f:
 
 time.sleep(0.5)
 
-# Получаем статистику
+# Get statistics
 stats = interceptor.get_stats()
-print(f"Захвачено строк: {stats['lines_captured']}")
-print(f"Обработано событий: {stats['events_processed']}")
-print(f"Время работы: {stats['uptime_seconds']:.2f}s")
+print(f"Captured lines: {stats['lines_captured']}")
+print(f"Events processed: {stats['events_processed']}")
+print(f"Uptime: {stats['uptime_seconds']:.2f}s")
 
 start_time = datetime.fromtimestamp(stats["start_time"])
-print(f"Запущен в: {start_time.strftime('%H:%M:%S')}")
+print(f"Started at: {start_time.strftime('%H:%M:%S')}")
 
 interceptor.stop()
 
-# Пример 3: Метаданные
-print("\n=== Пример 3: Метаданные ===\n")
+# Example 3: Metadata
+print("\n=== Example 3: Metadata ===\n")
 
 interceptor = LogInterceptor(
     source_file=source_file,
@@ -96,7 +96,7 @@ interceptor = LogInterceptor(
 )
 interceptor.start()
 
-# Важные события
+# Important events
 with source_file.open("a") as f:
     f.write("INFO: User login: john@example.com\n")
     time.sleep(0.1)
@@ -107,9 +107,9 @@ with source_file.open("a") as f:
 
 time.sleep(0.3)
 
-# Получаем метаданные для аудита
+# Get metadata for audit
 metadata = interceptor.get_lines_with_metadata()
-print(f"Всего событий: {len(metadata)}\n")
+print(f"Total events: {len(metadata)}\n")
 
 for entry in metadata:
     dt = datetime.fromtimestamp(entry["timestamp"])
@@ -120,13 +120,13 @@ for entry in metadata:
 
 interceptor.stop()
 
-# Пример 4: Timestamp в файлах
-print("=== Пример 4: Timestamp в файлах ===\n")
+# Example 4: Timestamps in files
+print("=== Example 4: Timestamps in Files ===\n")
 
 with LogInterceptor(
     source_file=source_file,
     target_file=target_file,
-    add_timestamps=True  # Добавляем ISO 8601 timestamp
+    add_timestamps=True  # Add ISO 8601 timestamp
 ) as interceptor:
     with source_file.open("a") as f:
         f.write("ERROR: Critical system error\n")
@@ -134,26 +134,26 @@ with LogInterceptor(
 
     time.sleep(0.5)
 
-# Показываем результат
+# Show result
 print("Captured file content:")
 print(target_file.read_text())
 
-# Пример 5: Конфигурация
-print("\n=== Пример 5: Конфигурация ===\n")
+# Example 5: Configuration
+print("\n=== Example 5: Configuration ===\n")
 
-# Aggressive preset для высоконагруженных систем
+# Aggressive preset for high-load systems
 config = InterceptorConfig.from_preset("aggressive")
 print("Aggressive config:")
 print(f"  debounce_interval: {config.debounce_interval}")
 print(f"  buffer_size: {config.buffer_size}")
 
-# Conservative preset для низкоприоритетных задач
+# Conservative preset for low-priority tasks
 config = InterceptorConfig.from_preset("conservative")
 print("\nConservative config:")
 print(f"  debounce_interval: {config.debounce_interval}")
 print(f"  buffer_size: {config.buffer_size}")
 
-# Кастомная конфигурация
+# Custom configuration
 config = InterceptorConfig(
     buffer_size=10000,
     encoding="utf-8",
@@ -169,5 +169,5 @@ source_file.unlink()
 if target_file.exists():
     target_file.unlink()
 
-print("\n✅ Пример завершен!")
+print("\n✅ Example completed!")
 

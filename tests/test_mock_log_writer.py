@@ -149,7 +149,7 @@ def test_mock_log_writer_double_start(tmp_path: Path) -> None:
     writer = MockLogWriter(log_file, thread_mode=True)
 
     writer.start()
-    with pytest.raises(RuntimeError, match="уже запущен"):
+    with pytest.raises(RuntimeError, match="is already running"):
         writer.start()
 
     writer.stop()

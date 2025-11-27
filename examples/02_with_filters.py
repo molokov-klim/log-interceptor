@@ -1,10 +1,10 @@
-"""Пример 2: Использование фильтров.
+"""Example 2: Using filters.
 
-Демонстрирует:
-- RegexFilter для фильтрации по паттерну
-- Whitelist и blacklist режимы
-- CompositeFilter для комбинации фильтров
-- Буферизация в памяти
+Demonstrates:
+- RegexFilter for pattern-based filtering
+- Whitelist and blacklist modes
+- CompositeFilter for combining filters
+- In-memory buffering
 """
 
 import time
@@ -28,7 +28,7 @@ with source_file.open("w") as f:
     f.write("CRITICAL: System overload\n")
 
 # Example 1: Only ERROR lines
-print("=== Пример 1: Только ERROR ===")
+print("=== Example 1: Only ERROR ===")
 error_filter = RegexFilter(r"ERROR", mode="whitelist")
 
 with LogInterceptor(
@@ -39,12 +39,12 @@ with LogInterceptor(
     time.sleep(0.5)
 
     lines = interceptor.get_buffered_lines()
-    print(f"Захвачено строк: {len(lines)}")
+    print(f"Captured lines: {len(lines)}")
     for line in lines:
         print(f"  {line.strip()}")
 
 # Example 2: Exclude DEBUG
-print("\n=== Пример 2: Без DEBUG ===")
+print("\n=== Example 2: Without DEBUG ===")
 no_debug = RegexFilter(r"DEBUG", mode="blacklist")
 
 with LogInterceptor(
@@ -55,12 +55,12 @@ with LogInterceptor(
     time.sleep(0.5)
 
     lines = interceptor.get_buffered_lines()
-    print(f"Захвачено строк: {len(lines)}")
+    print(f"Captured lines: {len(lines)}")
     for line in lines:
         print(f"  {line.strip()}")
 
 # Example 3: ERROR OR CRITICAL
-print("\n=== Пример 3: ERROR или CRITICAL ===")
+print("\n=== Example 3: ERROR or CRITICAL ===")
 critical_filter = CompositeFilter([
     RegexFilter(r"ERROR"),
     RegexFilter(r"CRITICAL")
@@ -74,12 +74,12 @@ with LogInterceptor(
     time.sleep(0.5)
 
     lines = interceptor.get_buffered_lines()
-    print(f"Захвачено строк: {len(lines)}")
+    print(f"Captured lines: {len(lines)}")
     for line in lines:
         print(f"  {line.strip()}")
 
 # Example 4: Complex filter
-print("\n=== Пример 4: Комплексный фильтр ===")
+print("\n=== Example 4: Complex Filter ===")
 complex_filter = CompositeFilter([
     # Must be ERROR, WARNING or CRITICAL
     CompositeFilter([
@@ -99,12 +99,12 @@ with LogInterceptor(
     time.sleep(0.5)
 
     lines = interceptor.get_buffered_lines()
-    print(f"Захвачено строк: {len(lines)}")
+    print(f"Captured lines: {len(lines)}")
     for line in lines:
         print(f"  {line.strip()}")
 
 # Cleanup
 source_file.unlink()
 
-print("\n✅ Пример завершен!")
+print("\n✅ Example completed!")
 

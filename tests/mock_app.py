@@ -50,10 +50,10 @@ class MockLogWriter:
     def start(self) -> None:
         """Start writer in thread mode."""
         if not self.thread_mode:
-            msg = "start() доступен только в thread_mode=True"
+            msg = "start() only available in thread_mode=True"
             raise RuntimeError(msg)
         if self._running:
-            msg = "Writer уже запущен"
+            msg = "Writer is already running"
             raise RuntimeError(msg)
 
         self._running = True
@@ -63,13 +63,13 @@ class MockLogWriter:
     def stop(self) -> None:
         """Stop writer in thread mode."""
         if not self.thread_mode:
-            msg = "stop() доступен только в thread_mode=True"
+            msg = "stop() only available in thread_mode=True"
             raise RuntimeError(msg)
         if not self._running:
             return
 
         self._running = False
-        self._queue.put(None)  # Сигнал остановки
+        self._queue.put(None)  # Stop signal
         if self._thread:
             self._thread.join(timeout=1.0)
             self._thread = None
@@ -78,7 +78,7 @@ class MockLogWriter:
         """Check if writer is running.
 
         Returns:
-            True если writer запущен, иначе False.
+            True if writer is running, False otherwise.
 
         """
         return self._running
@@ -87,7 +87,7 @@ class MockLogWriter:
         """Write line to log file.
 
         Args:
-            line: Строка для записи.
+            line: Line to write.
 
         """
         if self.thread_mode and self._running:
@@ -112,7 +112,7 @@ class MockLogWriter:
         """Worker thread for writing logs."""
         while self._running:
             line = self._queue.get()
-            if line is None:  # Сигнал остановки
+            if line is None:  # Stop signal
                 break
             self._write_to_file(line)
 
@@ -120,8 +120,8 @@ class MockLogWriter:
         """Write multiple lines with given interval.
 
         Args:
-            lines: Список строк для записи.
-            interval: Интервал между записями (в секундах).
+            lines: List of lines to write.
+            interval: Interval between writes (in seconds).
 
         """
         for line in lines:
@@ -132,10 +132,10 @@ class MockLogWriter:
     def rotate_file(self) -> Path:
         """Simulate log file rotation.
 
-        Переименовывает текущий файл с добавлением суффикса и создаёт новый пустой файл.
+        Renames current file with suffix and creates new empty file.
 
         Returns:
-            Путь к ротированному файлу.
+            Path to rotated file.
 
         """
         if self.log_file.exists():
@@ -144,7 +144,7 @@ class MockLogWriter:
             self.log_file.rename(rotated_path)
             return rotated_path
 
-        # Если файл не существует, создаём пустой ротированный файл
+        # If file does not exist, create empty rotated file
         self._rotation_counter += 1
         rotated_path = self.log_file.with_suffix(f".{self._rotation_counter}")
         rotated_path.touch()
@@ -154,7 +154,7 @@ class MockLogWriter:
         """Enter context manager.
 
         Returns:
-            Экземпляр MockLogWriter.
+            MockLogWriter instance.
 
         """
         if self.thread_mode:
@@ -170,9 +170,9 @@ class MockLogWriter:
         """Exit context manager.
 
         Args:
-            exc_type: Тип исключения.
-            exc_val: Значение исключения.
-            exc_tb: Traceback исключения.
+            exc_type: Exception type.
+            exc_val: Exception value.
+            exc_tb: Exception traceback.
 
         """
         if self.thread_mode and self._running:
@@ -193,7 +193,7 @@ class MockLogWriter:
         """Return number of lines in file.
 
         Returns:
-            Количество строк в лог-файле.
+            Number of lines in log file.
 
         """
         if not self.log_file.exists():

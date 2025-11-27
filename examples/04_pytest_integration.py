@@ -1,10 +1,10 @@
-"""Пример 4: Интеграция с pytest.
+"""Example 4: Pytest integration.
 
-Демонстрирует:
-- Создание fixtures для тестов
-- Проверку логов в автотестах
-- Использование temporary paths
-- Интеграционное тестирование
+Demonstrates:
+- Creating fixtures for tests
+- Checking logs in automated tests
+- Using temporary paths
+- Integration testing
 """
 
 import time
@@ -19,7 +19,7 @@ from log_interceptor.filters import RegexFilter
 # Example 1: Simple fixture
 @pytest.fixture
 def log_interceptor(tmp_path: Path):
-    """Фикстура для перехвата логов."""
+    """Fixture for capturing logs."""
     log_file = tmp_path / "app.log"
     log_file.touch()
 
@@ -38,7 +38,7 @@ def log_interceptor(tmp_path: Path):
 # Example 2: Fixture with filter
 @pytest.fixture
 def error_interceptor(tmp_path: Path):
-    """Фикстура для перехвата только ошибок."""
+    """Fixture for capturing only errors."""
     log_file = tmp_path / "app.log"
     log_file.touch()
 
@@ -57,7 +57,7 @@ def error_interceptor(tmp_path: Path):
 
 # Test example 1: Check logging
 def test_application_logs_startup(log_interceptor: LogInterceptor):
-    """Проверяем что приложение логирует старт."""
+    """Check that application logs startup."""
     # Simulate application
     with log_interceptor.source_file.open("a") as f:
         f.write("INFO: Application started\n")
@@ -73,8 +73,8 @@ def test_application_logs_startup(log_interceptor: LogInterceptor):
 
 # Test example 2: Check errors
 def test_application_handles_errors(error_interceptor: LogInterceptor):
-    """Проверяем что приложение логирует ошибки."""
-    # Simulate application с ошибками
+    """Check that application logs errors."""
+    # Simulate application with errors
     with error_interceptor.source_file.open("a") as f:
         f.write("INFO: Processing request\n")
         f.write("ERROR: Database connection failed\n")
@@ -91,35 +91,35 @@ def test_application_handles_errors(error_interceptor: LogInterceptor):
 
 # Test example 3: Statistics
 def test_interceptor_statistics(log_interceptor: LogInterceptor):
-    """Проверяем сбор статистики."""
-    # Генерируем логи
+    """Check statistics collection."""
+    # Generate logs
     with log_interceptor.source_file.open("a") as f:
         for i in range(10):
             f.write(f"INFO: Log entry {i}\n")
 
     time.sleep(0.3)
 
-    # Проверяем статистику
+    # Check statistics
     stats = log_interceptor.get_stats()
     assert stats["lines_captured"] >= 10
     assert stats["uptime_seconds"] > 0
     assert stats["events_processed"] >= 1
 
 
-# Пример теста 4: Pause/Resume
+# Test example 4: Pause/Resume
 def test_interceptor_pause_resume(log_interceptor: LogInterceptor):
-    """Проверяем pause/resume функциональность."""
-    # Пишем логи
+    """Check pause/resume functionality."""
+    # Write logs
     with log_interceptor.source_file.open("a") as f:
         f.write("INFO: Before pause\n")
 
     time.sleep(0.2)
 
-    # Пауза
+    # Pause
     log_interceptor.pause()
     assert log_interceptor.is_paused()
 
-    # Логи во время паузы не должны захватываться
+    # Logs during pause should not be captured
     with log_interceptor.source_file.open("a") as f:
         f.write("INFO: During pause\n")
 
@@ -134,17 +134,17 @@ def test_interceptor_pause_resume(log_interceptor: LogInterceptor):
 
     time.sleep(0.2)
 
-    # Проверяем
+    # Check
     lines = log_interceptor.get_buffered_lines()
     assert any("Before pause" in line for line in lines)
     assert any("After resume" in line for line in lines)
     assert not any("During pause" in line for line in lines)
 
 
-# Пример теста 5: Метаданные
+# Test example 5: Metadata
 def test_interceptor_metadata(log_interceptor: LogInterceptor):
-    """Проверяем метаданные."""
-    # Генерируем логи
+    """Check metadata."""
+    # Generate logs
     with log_interceptor.source_file.open("a") as f:
         f.write("INFO: Test log 1\n")
         f.write("INFO: Test log 2\n")
@@ -152,11 +152,11 @@ def test_interceptor_metadata(log_interceptor: LogInterceptor):
 
     time.sleep(0.3)
 
-    # Получаем метаданные
+    # Get metadata
     metadata = log_interceptor.get_lines_with_metadata()
     assert len(metadata) >= 3
 
-    # Проверяем структуру
+    # Check structure
     for entry in metadata:
         assert "line" in entry
         assert "timestamp" in entry
@@ -164,16 +164,16 @@ def test_interceptor_metadata(log_interceptor: LogInterceptor):
         assert isinstance(entry["timestamp"], float)
         assert isinstance(entry["event_id"], int)
 
-    # Проверяем уникальность event_id
+    # Check event_id uniqueness
     event_ids = [entry["event_id"] for entry in metadata]
     assert len(event_ids) == len(set(event_ids))
 
 
-# Запуск тестов
+# Run tests
 if __name__ == "__main__":
-    # Для запуска примера напрямую
-    print("Для запуска тестов используйте: pytest examples/04_pytest_integration.py")
-    print("\nДоступные тесты:")
+    # For running example directly
+    print("To run tests use: pytest examples/04_pytest_integration.py")
+    print("\nAvailable tests:")
     print("  - test_application_logs_startup")
     print("  - test_application_handles_errors")
     print("  - test_interceptor_statistics")
