@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from log_interceptor.interceptor import LogInterceptor
-from tests.mock_app import MockLogWriter
+from mock_app import MockLogWriter
 
 if TYPE_CHECKING:
     from collections.abc import Generator
