@@ -26,9 +26,7 @@ jobs:
       - name: Install uv
         run: pip install uv
       - name: Install dependencies
-        run: uv sync
-      - name: Install dev dependencies
-        run: uv sync --dev
+        run: uv pip install -e ".[dev]"
       - name: Run Pyright
         run: uv run pyright
 
@@ -36,7 +34,7 @@ jobs:
 # - Install uv:
 #   pip install uv
 # - Install dependencies:
-#   uv sync --dev
+#   uv pip install -e ".[dev]"
 # - Run Pyright type checker:
 #   uv run pyright
 # - Check specific file:
