@@ -5,9 +5,9 @@
 ---
 name: Pyright Type Check
 
-on:  # yamllint disable-line rule:truthy
-  push: {}
-  pull_request: {}
+on: # yamllint disable-line rule:truthy
+  push: { }
+  pull_request: { }
 
 jobs:
   # Purpose: Validates Python type annotations and catches type-related bugs
@@ -17,6 +17,7 @@ jobs:
   #                     safety, improves code quality, helps maintain proper
   #                     type annotations throughout the project
   type-check:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
