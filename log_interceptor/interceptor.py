@@ -6,8 +6,11 @@
 
 from __future__ import annotations
 
+import logging
 import threading
+import time
 from collections import deque
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -20,6 +23,12 @@ if TYPE_CHECKING:
     from watchdog.observers import Observer
 
     from log_interceptor.filters import BaseFilter
+
+# Тип для callback функций
+CallbackType = Callable[[str, float, int], None]
+
+# Настраиваем логгер для внутренних ошибок
+logger = logging.getLogger(__name__)
 
 
 class _LogFileEventHandler(FileSystemEventHandler):
@@ -103,6 +112,11 @@ class LogInterceptor:
         # Инициализируем фильтры
         self._filters: Sequence[BaseFilter] = filters if filters else []
 
+        # Инициализируем callback систему
+        self._callbacks: list[CallbackType] = []
+        self._callbacks_lock = threading.Lock()
+        self._event_counter = 0
+
         # Инициализируем позицию в файле (если файл существует)
         if self.source_file.exists():
             self._file_position = self.source_file.stat().st_size
@@ -174,6 +188,54 @@ class LogInterceptor:
         with self._buffer_lock:
             self._buffer.clear()
 
+    def add_callback(self, callback: CallbackType) -> None:
+        """Добавляет callback функцию для уведомления о новых строках.
+
+        Args:
+            callback: Функция с сигнатурой (line: str, timestamp: float, event_id: int) -> None
+
+        """
+        with self._callbacks_lock:
+            if callback not in self._callbacks:
+                self._callbacks.append(callback)
+
+    def remove_callback(self, callback: CallbackType) -> None:
+        """Удаляет callback функцию из списка.
+
+        Args:
+            callback: Функция для удаления.
+
+        """
+        with self._callbacks_lock:
+            if callback in self._callbacks:
+                self._callbacks.remove(callback)
+
+    def _invoke_callbacks(self, line: str) -> None:
+        """Вызывает все зарегистрированные callbacks для строки лога.
+
+        Args:
+            line: Строка лога для передачи в callbacks.
+
+        """
+        if not self._callbacks:
+            return
+
+        timestamp = time.time()
+        self._event_counter += 1
+        event_id = self._event_counter
+
+        # Копируем список callbacks под блокировкой
+        with self._callbacks_lock:
+            callbacks_copy = self._callbacks.copy()
+
+        # Вызываем callbacks вне блокировки
+        for callback in callbacks_copy:
+            try:
+                callback(line, timestamp, event_id)
+            except Exception:  # noqa: PERF203
+                # Логируем ошибку, но не прерываем обработку
+                logger.exception("Error in callback %s", callback.__name__)
+
     def _apply_filters(self, line: str) -> bool:
         """Применяет фильтры к строке лога.
 
@@ -211,11 +273,15 @@ class LogInterceptor:
             # Применяем фильтры к строкам
             filtered_lines = [line for line in new_lines if self._apply_filters(line)]
 
-            # Записываем отфильтрованные строки в буфер (если включён)
-            if self._buffer is not None and filtered_lines:
-                with self._buffer_lock:
-                    for line in filtered_lines:
+            # Обрабатываем каждую отфильтрованную строку
+            for line in filtered_lines:
+                # Записываем в буфер (если включён)
+                if self._buffer is not None:
+                    with self._buffer_lock:
                         self._buffer.append(line)
+
+                # Вызываем callbacks
+                self._invoke_callbacks(line)
 
             # Записываем отфильтрованные строки в целевой файл
             if self.target_file and filtered_lines:

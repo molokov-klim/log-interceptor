@@ -324,3 +324,108 @@ def test_interceptor_without_filters(tmp_path: Path) -> None:
     assert "Line 1" in lines
     assert "Line 2" in lines
     assert "Line 3" in lines
+
+
+def test_interceptor_callback_on_new_line(tmp_path: Path) -> None:
+    """LogInterceptor должен вызывать callback для каждой новой строки."""
+    source_file = tmp_path / "app.log"
+    source_file.touch()
+
+    captured_lines: list[str] = []
+
+    def on_line(line: str, _timestamp: float, _event_id: int) -> None:
+        captured_lines.append(line)
+
+    interceptor = LogInterceptor(source_file=source_file)
+    interceptor.add_callback(on_line)
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("Line 1")
+    writer.write_line("Line 2")
+
+    time.sleep(0.3)
+    interceptor.stop()
+
+    assert len(captured_lines) >= 2
+    assert any("Line 1" in line for line in captured_lines)
+    assert any("Line 2" in line for line in captured_lines)
+
+
+def test_interceptor_callback_error_handling(tmp_path: Path) -> None:
+    """Ошибка в callback не должна останавливать мониторинг."""
+    source_file = tmp_path / "app.log"
+    source_file.touch()
+
+    def failing_callback(_line: str, _timestamp: float, _event_id: int) -> None:
+        msg = "Callback error"
+        raise ValueError(msg)
+
+    interceptor = LogInterceptor(source_file=source_file)
+    interceptor.add_callback(failing_callback)
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("Test line")
+
+    time.sleep(0.3)
+
+    # Interceptor всё ещё работает
+    assert interceptor.is_running()
+
+    interceptor.stop()
+
+
+def test_interceptor_multiple_callbacks(tmp_path: Path) -> None:
+    """LogInterceptor должен поддерживать несколько callbacks."""
+    source_file = tmp_path / "app.log"
+    source_file.touch()
+
+    captured_lines_1: list[str] = []
+    captured_lines_2: list[str] = []
+
+    def callback_1(line: str, _timestamp: float, _event_id: int) -> None:
+        captured_lines_1.append(line)
+
+    def callback_2(line: str, _timestamp: float, _event_id: int) -> None:
+        captured_lines_2.append(line)
+
+    interceptor = LogInterceptor(source_file=source_file)
+    interceptor.add_callback(callback_1)
+    interceptor.add_callback(callback_2)
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("Test line")
+
+    time.sleep(0.3)
+    interceptor.stop()
+
+    # Оба callback должны быть вызваны  # noqa: RUF003
+    assert len(captured_lines_1) >= 1
+    assert len(captured_lines_2) >= 1
+
+
+def test_interceptor_remove_callback(tmp_path: Path) -> None:
+    """remove_callback должен удалять callback из списка."""
+    source_file = tmp_path / "app.log"
+    source_file.touch()
+
+    captured_lines: list[str] = []
+
+    def on_line(line: str, _timestamp: float, _event_id: int) -> None:
+        captured_lines.append(line)
+
+    interceptor = LogInterceptor(source_file=source_file)
+    interceptor.add_callback(on_line)
+    interceptor.remove_callback(on_line)
+    interceptor.start()
+
+    writer = MockLogWriter(source_file)
+    writer.write_line("Test line")
+
+    time.sleep(0.3)
+    interceptor.stop()
+
+    # Callback был удален, не должен быть вызван
+    assert len(captured_lines) == 0
