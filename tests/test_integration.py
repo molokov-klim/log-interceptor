@@ -47,7 +47,7 @@ def test_integration_with_filter_and_callback(tmp_path: Path) -> None:
         nonlocal error_count
         error_count += 1
 
-    # Создаем interceptor с фильтром на ERROR  # noqa: RUF003
+    # Создаем interceptor с фильтром на ERROR
     error_filter = RegexFilter(r"ERROR", mode="whitelist")
     interceptor = LogInterceptor(
         source_file=source_file,
@@ -179,7 +179,7 @@ def test_integration_metadata_tracking(tmp_path: Path) -> None:
 
     # Проверяем что event_id уникальны и последовательны
     event_ids = [entry["event_id"] for entry in metadata]
-    assert len(event_ids) == len(set(event_ids))  # Все уникальны  # noqa: RUF003
+    assert len(event_ids) == len(set(event_ids))  # Все уникальны
 
 
 def test_integration_error_recovery(tmp_path: Path) -> None:
@@ -206,7 +206,7 @@ def test_integration_error_recovery(tmp_path: Path) -> None:
     lines = interceptor.get_buffered_lines()
     interceptor.stop()
 
-    # Должны быть захвачены обе строки  # noqa: RUF003
+    # Должны быть захвачены обе строки
     assert any("Before rotation" in line for line in lines)
     assert any("After rotation" in line for line in lines)
 

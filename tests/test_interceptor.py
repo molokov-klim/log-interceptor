@@ -36,7 +36,7 @@ def test_interceptor_requires_existing_file(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match=error_msg):
         LogInterceptor(source_file=non_existent)
 
-    # Должно работать с флагом allow_missing=True  # noqa: RUF003
+    # Должно работать с флагом allow_missing=True
     interceptor = LogInterceptor(source_file=non_existent, allow_missing=True)
     assert interceptor is not None
     assert interceptor.source_file == non_existent
@@ -76,7 +76,7 @@ def test_interceptor_captures_new_lines(tmp_path: Path) -> None:
     source_file = tmp_path / "app.log"
     target_file = tmp_path / "captured.log"
 
-    # Создаём исходный файл с начальным содержимым  # noqa: RUF003
+    # Создаём исходный файл с начальным содержимым
     source_file.write_text("Initial line\n")
 
     interceptor = LogInterceptor(source_file=source_file, target_file=target_file)
@@ -96,7 +96,7 @@ def test_interceptor_captures_new_lines(tmp_path: Path) -> None:
     captured = target_file.read_text().splitlines()
     assert "New line 1" in captured
     assert "New line 2" in captured
-    assert "Initial line" not in captured  # Не должен захватывать старые  # noqa: RUF003
+    assert "Initial line" not in captured  # Не должен захватывать старые
 
 
 def test_interceptor_memory_buffer(tmp_path: Path) -> None:
@@ -297,9 +297,9 @@ def test_interceptor_with_multiple_filters(tmp_path: Path) -> None:
     lines = target_file.read_text().splitlines()
     # Должна быть минимум 1 строка
     assert len(lines) >= 1
-    # Все строки должны содержать И ERROR И Critical  # noqa: RUF003
+    # Все строки должны содержать И ERROR И Critical
     assert all("ERROR" in line and "Critical" in line for line in lines)
-    # Не должно быть INFO или WARNING  # noqa: RUF003
+    # Не должно быть INFO или WARNING
     assert not any("INFO" in line for line in lines)
     assert not any("WARNING" in line for line in lines)
 
@@ -407,7 +407,7 @@ def test_interceptor_multiple_callbacks(tmp_path: Path) -> None:
     time.sleep(0.3)
     interceptor.stop()
 
-    # Оба callback должны быть вызваны  # noqa: RUF003
+    # Оба callback должны быть вызваны
     assert len(captured_lines_1) >= 1
     assert len(captured_lines_2) >= 1
 
@@ -545,7 +545,7 @@ def test_interceptor_handles_file_rotation(tmp_path: Path) -> None:
     lines = interceptor.get_buffered_lines()
     interceptor.stop()
 
-    # Должны быть обе строки  # noqa: RUF003
+    # Должны быть обе строки
     assert any("Line before rotation" in line for line in lines)
     assert any("Line after rotation" in line for line in lines)
 
@@ -577,7 +577,7 @@ def test_interceptor_with_config(tmp_path: Path) -> None:
     time.sleep(0.3)
     interceptor.stop()
 
-    # Проверяем что файл был записан с правильной кодировкой  # noqa: RUF003
+    # Проверяем что файл был записан с правильной кодировкой
     content = target_file.read_text(encoding="utf-8")
     assert "Test with config" in content
 
@@ -663,7 +663,7 @@ def test_interceptor_pause_resume(tmp_path: Path) -> None:
     # Line 1 и Line 2 должны быть захвачены
     assert any("Line 1" in line for line in lines)
     assert any("Line 2" in line for line in lines)
-    # Line during pause НЕ должна быть захвачена  # noqa: RUF003
+    # Line during pause НЕ должна быть захвачена
     assert not any("Line during pause" in line for line in lines)
 
 
@@ -719,6 +719,6 @@ def test_interceptor_debounce_prevents_duplicates(tmp_path: Path) -> None:
 
     # Должно быть обработано меньше событий из-за debounce
     assert stats["events_processed"] < 10
-    # Но все строки должны быть захвачены  # noqa: RUF003
+    # Но все строки должны быть захвачены
     lines = interceptor.get_buffered_lines()
     assert len(lines) >= 10

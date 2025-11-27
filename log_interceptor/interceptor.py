@@ -379,7 +379,7 @@ class LogInterceptor:
             if not self.source_file.exists():
                 return
 
-            # Debounce mechanism: проверяем, прошло ли достаточно времени с последнего события  # noqa: RUF003
+            # Debounce mechanism: проверяем, прошло ли достаточно времени с последнего события
             current_time = time.time()
             is_debounced_event = False
             if self._last_event_time is not None:

@@ -109,10 +109,10 @@ def test_interceptor_performance_debounce(tmp_path: Path, benchmark: BenchmarkFi
     stats = interceptor.get_stats()
     interceptor.stop()
 
-    # Все строки должны быть захвачены (может быть больше из-за rounds)  # noqa: RUF003
+    # Все строки должны быть захвачены (может быть больше из-за rounds)
     assert stats["lines_captured"] >= 500
     # events_processed может быть меньше из-за debounce
-    # но с множественными rounds может быть больше 500  # noqa: RUF003
+    # но с множественными rounds может быть больше 500
     assert stats["events_processed"] >= 1
 
 
