@@ -6,7 +6,7 @@
 name: Publish Python Package
 
 on: # yamllint disable-line rule:truthy
-  workflow_dispatch: { }
+  push:
 
 permissions:
   contents: read
